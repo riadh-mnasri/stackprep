@@ -2,7 +2,7 @@
 
 Interview training for Java, Spring Boot and Angular technical interviews: questions phrased the way a real interviewer would ask them, corrections that call out the classic traps, progress tracking by topic, and a graded test that simulates a pre-interview review.
 
-**Live demo: [stackprep-fawn.vercel.app](https://stackprep-fawn.vercel.app)**
+**Live demo: [getstackprep.vercel.app](https://getstackprep.vercel.app)**
 
 [README en français](./README.md)
 

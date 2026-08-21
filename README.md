@@ -2,7 +2,7 @@
 
 Entraînement aux entretiens techniques Java, Spring Boot et Angular : questions posées comme en vrai entretien, correction avec les pièges classiques, suivi de progression par thème et test noté façon mise en situation.
 
-**Démo en ligne : [stackprep-fawn.vercel.app](https://stackprep-fawn.vercel.app)**
+**Démo en ligne : [getstackprep.vercel.app](https://getstackprep.vercel.app)**
 
 [README in English](./README.en.md)
 
