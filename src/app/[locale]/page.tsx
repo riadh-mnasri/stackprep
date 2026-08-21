@@ -4,6 +4,7 @@ import { topics } from "@/content/topics";
 import { questions } from "@/content/questions";
 import { TopicIcon, ArrowRightIcon } from "@/components/icons";
 import { StatsSummary } from "@/components/stats-summary";
+import { siteName, siteUrl } from "@/lib/site";
 
 export default async function HomePage({
   params,
@@ -14,6 +15,7 @@ export default async function HomePage({
   const l = locale as "fr" | "en";
   const t = await getTranslations("home");
   const tp = await getTranslations("topic");
+  const meta = await getTranslations("meta");
 
   const steps = [
     { title: t("step1Title"), body: t("step1Body") },
@@ -21,8 +23,28 @@ export default async function HomePage({
     { title: t("step3Title"), body: t("step3Body") },
   ];
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: siteName,
+    url: `${siteUrl}/${locale}`,
+    description: meta("description"),
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    inLanguage: locale,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+    },
+  };
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="relative overflow-hidden bg-noise">
         <div className="hero-glow pointer-events-none absolute inset-0" />
         <div className="relative mx-auto max-w-5xl px-5 pb-14 pt-16 sm:pt-24">

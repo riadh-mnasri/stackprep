@@ -1,7 +1,8 @@
 {
   "meta": {
-    "title": "StackPrep — Java, Spring, Angular interview prep",
-    "description": "Train for Java, Spring Boot and Angular technical interviews with real questions, detailed corrections and progress tracking."
+    "title": "StackPrep: Java, Spring, Angular interview prep",
+    "description": "Train for Java, Spring Boot and Angular technical interviews with real questions, detailed corrections and progress tracking.",
+    "keywords": "java interview questions, spring boot interview prep, angular interview questions, backend developer interview, technical interview practice, jpa hibernate interview, sql interview questions"
   },
   "nav": {
     "home": "Home",

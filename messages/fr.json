@@ -1,7 +1,8 @@
 {
   "meta": {
-    "title": "StackPrep — Préparation entretien Java, Spring, Angular",
-    "description": "Entraîne-toi aux entretiens techniques Java, Spring Boot et Angular avec des questions réelles, des corrections détaillées et un suivi de progression."
+    "title": "StackPrep : préparation entretien Java, Spring, Angular",
+    "description": "Entraîne-toi aux entretiens techniques Java, Spring Boot et Angular avec des questions réelles, des corrections détaillées et un suivi de progression.",
+    "keywords": "entretien technique java, préparation entretien spring boot, questions entretien angular, entretien développeur backend, prépa entretien développeur, JPA hibernate entretien, questions sql entretien"
   },
   "nav": {
     "home": "Accueil",
