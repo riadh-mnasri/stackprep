@@ -1,33 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf7f2;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --foreground: #221c15;
-  --muted: #756a5c;
-  --border: #e6ddd0;
-  --accent: #b5591f;
-  --accent-foreground: #fffaf3;
-  --success: #3f7d4a;
-  --warning: #b8862f;
-  --danger: #b8442f;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #14100c;
-    --surface: #1c1712;
-    --surface-raised: #221b15;
-    --foreground: #f3ece0;
-    --muted: #a89a86;
-    --border: #332920;
-    --accent: #e08a45;
-    --accent-foreground: #1a1108;
-    --success: #6fbf7a;
-    --warning: #d8ab5c;
-    --danger: #e0725a;
-  }
+  --background: #170f1e;
+  --background-2: #2c0f2a;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-raised: rgba(255, 255, 255, 0.08);
+  --foreground: #f8f4fb;
+  --muted: #b7abc4;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #ec6a3c;
+  --accent-foreground: #1d0f08;
+  --success: #6fd08a;
+  --warning: #e7b158;
+  --danger: #ef7361;
+  --grad-start: #f9863c;
+  --grad-mid: #ef4f8f;
+  --grad-end: #9457e8;
 }
 
 @theme inline {
@@ -51,55 +39,101 @@
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(
+      1100px circle at 85% -10%,
+      color-mix(in srgb, var(--grad-mid) 26%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px circle at -10% 30%,
+      color-mix(in srgb, var(--grad-end) 20%, transparent),
+      transparent 55%
+    ),
+    var(--background);
   color: var(--foreground);
 }
 
 ::selection {
-  background: var(--accent);
-  color: var(--accent-foreground);
+  background: var(--grad-mid);
+  color: #fff;
 }
 
 .bg-noise {
   background-image: radial-gradient(
       circle at 1px 1px,
-      color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+      color-mix(in srgb, var(--foreground) 8%, transparent) 1px,
       transparent 0
     );
   background-size: 22px 22px;
 }
 
 .hero-glow {
-  background: radial-gradient(
-    600px circle at 15% 20%,
-    color-mix(in srgb, var(--accent) 16%, transparent),
-    transparent 65%
+  background:
+    radial-gradient(
+      560px circle at 20% 25%,
+      color-mix(in srgb, var(--grad-mid) 28%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      480px circle at 80% 60%,
+      color-mix(in srgb, var(--grad-start) 20%, transparent),
+      transparent 65%
+    );
+}
+
+.text-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--grad-start),
+    var(--grad-mid) 55%,
+    var(--grad-end)
   );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.btn-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--grad-start),
+    var(--grad-mid) 55%,
+    var(--grad-end)
+  );
+  color: #fff;
 }
 
 .panel {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   box-shadow:
-    0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent),
-    0 14px 32px -16px color-mix(in srgb, var(--foreground) 22%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 40px -18px rgba(0, 0, 0, 0.55);
 }
 
 .panel-interactive {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   box-shadow:
-    0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent),
-    0 10px 24px -14px color-mix(in srgb, var(--foreground) 18%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 30px -18px rgba(0, 0, 0, 0.5);
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
-    border-color 180ms ease;
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
 .panel-interactive:hover {
   transform: translateY(-3px);
+  background-color: var(--surface-raised);
   box-shadow:
-    0 2px 4px color-mix(in srgb, var(--foreground) 7%, transparent),
-    0 20px 40px -16px color-mix(in srgb, var(--topic-accent, var(--accent)) 34%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 22px 44px -16px
+      color-mix(in srgb, var(--topic-accent, var(--grad-mid)) 45%, transparent);
 }
 
 .icon-tile {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 25%, transparent);
 }

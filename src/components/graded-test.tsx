@@ -99,7 +99,7 @@ export function GradedTest() {
                   onClick={() => setLength(n)}
                   className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-all duration-150 ${
                     length === n
-                      ? "border-accent bg-accent text-accent-foreground shadow-md"
+                      ? "btn-gradient border-transparent shadow-md"
                       : "border-border hover:-translate-y-0.5 hover:bg-surface-raised hover:shadow-md"
                   }`}
                 >
@@ -109,7 +109,7 @@ export function GradedTest() {
             </div>
             <button
               onClick={startTest}
-              className="mt-6 w-full rounded-full bg-accent py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.01] active:scale-[0.99]"
+              className="btn-gradient mt-6 w-full rounded-full py-2.5 text-sm font-semibold shadow-[0_8px_24px_-8px_var(--grad-mid)] transition-all hover:scale-[1.01] hover:shadow-[0_14px_32px_-10px_var(--grad-mid)] active:scale-[0.99]"
             >
               {t("start")}
             </button>
@@ -142,13 +142,13 @@ export function GradedTest() {
   return (
     <div className="mx-auto max-w-xl px-5 py-16">
       <div className="panel rounded-2xl border border-border bg-surface p-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+        <div className="btn-gradient mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
           <GaugeIcon className="h-6 w-6" />
         </div>
         <h1 className="text-lg font-medium text-muted">
           {t("resultsHeading")}
         </h1>
-        <p className="mt-2 text-5xl font-semibold tabular-nums">
+        <p className="text-gradient mt-2 text-6xl font-extrabold tabular-nums">
           {outcome.score}%
         </p>
         <p
@@ -195,13 +195,13 @@ export function GradedTest() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => setPhase("setup")}
-            className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground"
+            className="btn-gradient inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg"
           >
             {t("retry")}
           </button>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium transition-all hover:-translate-y-0.5 hover:bg-surface-raised"
           >
             {t("toDashboard")}
           </Link>

@@ -11,7 +11,9 @@
   },
   "home": {
     "kicker": "Technical interview prep",
-    "title": "Get ready for Java, Spring and Angular interviews",
+    "titlePrefix": "Get ready for",
+    "titleHighlight": "Java, Spring and Angular",
+    "titleSuffix": "interviews",
     "subtitle": "Real interview questions, corrections that call out the classic traps, and a weak-spot tracker by topic.",
     "ctaPractice": "Start practicing",
     "ctaTest": "Take the graded test",

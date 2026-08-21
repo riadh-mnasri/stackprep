@@ -23,7 +23,7 @@ export function Header() {
           href="/"
           className="flex items-center gap-2 font-semibold tracking-tight"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <span className="btn-gradient flex h-8 w-8 items-center justify-center rounded-lg">
             <TopicIcon topicId="java-core" className="h-4.5 w-4.5" />
           </span>
           <span className="text-[15px]">StackPrep</span>
@@ -57,7 +57,7 @@ export function Header() {
             locale="fr"
             className={`rounded-full px-2.5 py-1 transition-colors ${
               locale === "fr"
-                ? "bg-accent text-accent-foreground"
+                ? "btn-gradient"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -68,7 +68,7 @@ export function Header() {
             locale="en"
             className={`rounded-full px-2.5 py-1 transition-colors ${
               locale === "en"
-                ? "bg-accent text-accent-foreground"
+                ? "btn-gradient"
                 : "text-muted hover:text-foreground"
             }`}
           >

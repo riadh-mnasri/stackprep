@@ -24,7 +24,7 @@ export function StatsSummary() {
           {t("statsHeading")}
         </div>
         <div className="mb-6 flex items-baseline gap-2">
-          <span className="text-4xl font-semibold tabular-nums">
+          <span className="text-gradient text-4xl font-extrabold tabular-nums">
             {overall}%
           </span>
           <span className="text-sm text-muted">

@@ -16,8 +16,8 @@ export const topics: Topic[] = [
       fr: "Types, collections, streams, concurrence",
       en: "Types, collections, streams, concurrency",
     },
-    accent: "#d98c3f",
-    accentSoft: "rgba(217, 140, 63, 0.14)",
+    accent: "#f0a25c",
+    accentSoft: "rgba(240, 162, 92, 0.22)",
   },
   {
     id: "spring-boot",
@@ -26,8 +26,8 @@ export const topics: Topic[] = [
       fr: "Injection de dépendances, MVC, sécurité, tests",
       en: "Dependency injection, MVC, security, testing",
     },
-    accent: "#5a9c5e",
-    accentSoft: "rgba(90, 156, 94, 0.14)",
+    accent: "#6fcf7a",
+    accentSoft: "rgba(111, 207, 122, 0.2)",
   },
   {
     id: "jpa-hibernate",
@@ -36,8 +36,8 @@ export const topics: Topic[] = [
       fr: "Mapping, relations, cache, performance",
       en: "Mapping, relations, caching, performance",
     },
-    accent: "#4f8a9c",
-    accentSoft: "rgba(79, 138, 156, 0.14)",
+    accent: "#5fb8cf",
+    accentSoft: "rgba(95, 184, 207, 0.2)",
   },
   {
     id: "sql",
@@ -46,8 +46,8 @@ export const topics: Topic[] = [
       fr: "Jointures, index, transactions, modélisation",
       en: "Joins, indexes, transactions, modeling",
     },
-    accent: "#5c7ea3",
-    accentSoft: "rgba(92, 126, 163, 0.14)",
+    accent: "#7f9fd6",
+    accentSoft: "rgba(127, 159, 214, 0.2)",
   },
   {
     id: "angular",
@@ -56,8 +56,8 @@ export const topics: Topic[] = [
       fr: "Change detection, RxJS, signals, formulaires",
       en: "Change detection, RxJS, signals, forms",
     },
-    accent: "#c94f4f",
-    accentSoft: "rgba(201, 79, 79, 0.14)",
+    accent: "#ef6b6b",
+    accentSoft: "rgba(239, 107, 107, 0.2)",
   },
 ];
 

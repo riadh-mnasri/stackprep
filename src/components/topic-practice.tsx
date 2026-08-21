@@ -44,13 +44,13 @@ export function TopicPractice({
               setDone(false);
               setSessionKey((k) => k + 1);
             }}
-            className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground"
+            className="btn-gradient inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg"
           >
             {t("restartTopic")}
           </button>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium transition-all hover:-translate-y-0.5 hover:bg-surface-raised"
           >
             {t("toDashboard")}
           </Link>

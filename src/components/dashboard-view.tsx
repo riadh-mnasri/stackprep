@@ -56,7 +56,7 @@ export function DashboardView() {
               <GaugeIcon className="h-4 w-4" />
               {t("overallMastery")}
             </div>
-            <p className="mt-2 text-4xl font-semibold tabular-nums">
+            <p className="text-gradient mt-2 text-5xl font-extrabold tabular-nums">
               {overall}%
             </p>
           </div>

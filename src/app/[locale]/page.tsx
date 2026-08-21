@@ -26,17 +26,19 @@ export default async function HomePage({
       <section className="relative overflow-hidden bg-noise">
         <div className="hero-glow pointer-events-none absolute inset-0" />
         <div className="relative mx-auto max-w-5xl px-5 pb-14 pt-16 sm:pt-24">
-          <p className="mb-4 text-sm font-medium tracking-wide text-accent">
+          <p className="mb-4 text-sm font-semibold tracking-wide text-gradient">
             {t("kicker")}
           </p>
-          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            {t("title")}
+          <h1 className="max-w-3xl text-5xl font-extrabold tracking-tight sm:text-6xl">
+            {t("titlePrefix")}{" "}
+            <span className="text-gradient">{t("titleHighlight")}</span>{" "}
+            {t("titleSuffix")}
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-muted">{t("subtitle")}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <p className="mt-6 max-w-xl text-lg text-muted">{t("subtitle")}</p>
+          <div className="mt-9 flex flex-wrap gap-3">
             <Link
               href="/practice"
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground shadow-md transition-all hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
+              className="btn-gradient inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-[0_8px_24px_-8px_var(--grad-mid)] transition-all hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-[0_14px_32px_-10px_var(--grad-mid)] active:translate-y-0 active:scale-[0.98]"
             >
               {t("ctaPractice")}
               <ArrowRightIcon className="h-4 w-4" />
@@ -112,7 +114,7 @@ export default async function HomePage({
               key={step.title}
               className="panel rounded-2xl border border-border bg-surface p-5"
             >
-              <span className="text-xs font-medium text-accent">
+              <span className="text-xs font-bold text-gradient">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <h3 className="mt-2 font-medium">{step.title}</h3>
