@@ -16,6 +16,14 @@ const topicColors = [
   "#d08a68",
   "#4fa8e0",
   "#e0b84f",
+  "#a394d6",
+  "#d17fc4",
+  "#7fd6c2",
+  "#e0954f",
+  "#5c8fe6",
+  "#3fc4d4",
+  "#9868d9",
+  "#e0765f",
 ];
 
 export default async function Image({

@@ -89,6 +89,86 @@ export const topics: Topic[] = [
     accent: "#e0b84f",
     accentSoft: "rgba(224, 184, 79, 0.2)",
   },
+  {
+    id: "kafka",
+    name: { fr: "Kafka", en: "Kafka" },
+    tagline: {
+      fr: "Topics, partitions, consumer groups, exactly-once",
+      en: "Topics, partitions, consumer groups, exactly-once",
+    },
+    accent: "#a394d6",
+    accentSoft: "rgba(163, 148, 214, 0.2)",
+  },
+  {
+    id: "kotlin",
+    name: { fr: "Kotlin", en: "Kotlin" },
+    tagline: {
+      fr: "Null safety, coroutines, sealed classes, extensions",
+      en: "Null safety, coroutines, sealed classes, extensions",
+    },
+    accent: "#d17fc4",
+    accentSoft: "rgba(209, 127, 196, 0.2)",
+  },
+  {
+    id: "copilot",
+    name: { fr: "GitHub Copilot", en: "GitHub Copilot" },
+    tagline: {
+      fr: "Dev assisté par IA, revue de code, risques",
+      en: "AI-assisted development, code review, risks",
+    },
+    accent: "#7fd6c2",
+    accentSoft: "rgba(127, 214, 194, 0.2)",
+  },
+  {
+    id: "aws",
+    name: { fr: "AWS", en: "AWS" },
+    tagline: {
+      fr: "EC2, Lambda, IAM, S3, RDS, DynamoDB",
+      en: "EC2, Lambda, IAM, S3, RDS, DynamoDB",
+    },
+    accent: "#e0954f",
+    accentSoft: "rgba(224, 149, 79, 0.2)",
+  },
+  {
+    id: "azure",
+    name: { fr: "Azure", en: "Azure" },
+    tagline: {
+      fr: "App Service, AKS, Entra ID, Functions",
+      en: "App Service, AKS, Entra ID, Functions",
+    },
+    accent: "#5c8fe6",
+    accentSoft: "rgba(92, 143, 230, 0.2)",
+  },
+  {
+    id: "docker",
+    name: { fr: "Docker", en: "Docker" },
+    tagline: {
+      fr: "Images, couches, réseau, multi-stage builds",
+      en: "Images, layers, networking, multi-stage builds",
+    },
+    accent: "#3fc4d4",
+    accentSoft: "rgba(63, 196, 212, 0.2)",
+  },
+  {
+    id: "terraform",
+    name: { fr: "Terraform", en: "Terraform" },
+    tagline: {
+      fr: "State, plan/apply, modules, dérive de configuration",
+      en: "State, plan/apply, modules, configuration drift",
+    },
+    accent: "#9868d9",
+    accentSoft: "rgba(152, 104, 217, 0.2)",
+  },
+  {
+    id: "spark",
+    name: { fr: "Apache Spark", en: "Apache Spark" },
+    tagline: {
+      fr: "RDD, DataFrame, shuffle, streaming structuré",
+      en: "RDD, DataFrame, shuffle, structured streaming",
+    },
+    accent: "#e0765f",
+    accentSoft: "rgba(224, 118, 95, 0.2)",
+  },
 ];
 
 export function getTopic(id: TopicId): Topic {

@@ -6,7 +6,15 @@ export type TopicId =
   | "angular"
   | "claude"
   | "kubernetes"
-  | "gcp";
+  | "gcp"
+  | "kafka"
+  | "kotlin"
+  | "copilot"
+  | "aws"
+  | "azure"
+  | "docker"
+  | "terraform"
+  | "spark";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -1300,5 +1308,1173 @@ export const questions: Question[] = [
       en: "The trap is treating least privilege as a one-off configuration done once at project launch: permissions tend to accumulate over time as new needs appear, without ever being removed, which is why a recurring audit matters more than a single review.",
     },
     tags: ["iam", "security", "least-privilege"],
+  },
+
+  // Kafka
+  {
+    id: "kafka-topic-partition-basics",
+    topicId: "kafka",
+    difficulty: "easy",
+    question: {
+      fr: "Quelle est la différence entre un topic et une partition dans Kafka ?",
+      en: "What is the difference between a topic and a partition in Kafka ?",
+    },
+    answer: {
+      fr: "Un topic est le flux logique nommé dans lequel les producteurs publient des messages, l'équivalent d'une catégorie ou d'un canal. Un topic est physiquement découpé en une ou plusieurs partitions, chacune étant un journal ordonné et immuable auquel les messages sont ajoutés séquentiellement. Ce découpage en partitions est ce qui permet à Kafka de paralléliser la charge, en répartissant les partitions sur plusieurs brokers et en laissant plusieurs consommateurs traiter des partitions différentes en parallèle.",
+      en: "A topic is the named logical stream that producers publish messages to, the equivalent of a category or a channel. A topic is physically split into one or more partitions, each an ordered, immutable log that messages are appended to sequentially. This split into partitions is what lets Kafka parallelize load, by spreading partitions across multiple brokers and letting several consumers process different partitions in parallel.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que Kafka garantit un ordre global des messages sur tout le topic : l'ordre n'est garanti qu'à l'intérieur d'une même partition, pas entre partitions différentes, ce qui a des conséquences directes sur le choix de la clé de partitionnement.",
+      en: "The trap is believing Kafka guarantees a global message order across the whole topic: ordering is only guaranteed within a single partition, not across different partitions, which has direct consequences on the choice of partitioning key.",
+    },
+    tags: ["topics", "partitions", "basics"],
+  },
+  {
+    id: "kafka-producer-acks",
+    topicId: "kafka",
+    difficulty: "medium",
+    question: {
+      fr: "Que contrôle le paramètre acks côté producteur Kafka, et quels sont les compromis entre ses valeurs ?",
+      en: "What does the acks parameter control on the Kafka producer side, and what are the trade-offs between its values ?",
+    },
+    answer: {
+      fr: "Le paramètre acks détermine combien de brokers doivent confirmer la réception d'un message avant que le producteur considère l'envoi comme réussi. Avec acks=0, le producteur n'attend aucune confirmation, ce qui donne le débit maximal mais aucune garantie de livraison en cas de panne. Avec acks=1, seul le broker leader de la partition doit confirmer, un compromis raisonnable mais qui peut perdre des messages si le leader tombe juste après avoir confirmé et avant que les répliques ne l'aient rattrapé. Avec acks=all (ou -1), tous les réplicas synchrones doivent confirmer, ce qui offre la meilleure durabilité au prix d'une latence plus élevée.",
+      en: "The acks parameter determines how many brokers must confirm receipt of a message before the producer considers the send successful. With acks=0, the producer waits for no confirmation, giving maximum throughput but no delivery guarantee in case of failure. With acks=1, only the partition's leader broker must confirm, a reasonable trade-off but one that can lose messages if the leader fails right after confirming and before replicas have caught up. With acks=all (or -1), every in-sync replica must confirm, giving the best durability at the cost of higher latency.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter acks=all comme toujours le meilleur choix sans mentionner son coût en latence et en débit : le bon réglage dépend du besoin métier, une plateforme de logs applicatifs tolère mieux une perte occasionnelle qu'un système de paiement.",
+      en: "The interview trap is presenting acks=all as always the best choice without mentioning its cost in latency and throughput: the right setting depends on the business need, an application log pipeline tolerates an occasional loss much better than a payment system.",
+    },
+    tags: ["producer", "durability", "reliability"],
+  },
+  {
+    id: "kafka-consumer-group-rebalancing",
+    topicId: "kafka",
+    difficulty: "medium",
+    question: {
+      fr: "Qu'est-ce qu'un consumer group, et que se passe-t-il lors d'un rebalancing ?",
+      en: "What is a consumer group, and what happens during a rebalance ?",
+    },
+    answer: {
+      fr: "Un consumer group est un ensemble de consommateurs qui se partagent la lecture des partitions d'un topic, chaque partition n'étant assignée qu'à un seul consommateur du groupe à la fois, ce qui permet de paralléliser le traitement tout en garantissant que chaque message n'est traité qu'une fois par ce groupe. Un rebalancing se déclenche quand la composition du groupe change, par exemple un consommateur qui rejoint, qui quitte ou qui tombe en panne : Kafka réassigne alors les partitions entre les consommateurs restants. Pendant ce rebalancing, la consommation s'arrête temporairement le temps que la nouvelle assignation soit établie.",
+      en: "A consumer group is a set of consumers that share the reading of a topic's partitions, with each partition assigned to only one consumer in the group at a time, which parallelizes processing while guaranteeing each message is only processed once by that group. A rebalance is triggered when the group's membership changes, for example a consumer joining, leaving or failing: Kafka then reassigns partitions among the remaining consumers. During this rebalance, consumption temporarily pauses until the new assignment is settled.",
+    },
+    pitfall: {
+      fr: "Le piège est de sous-estimer l'impact d'un rebalancing trop fréquent : un traitement de message trop long qui dépasse le délai max.poll.interval.ms peut faire croire à Kafka que le consommateur est mort et déclencher un rebalancing inutile, créant une boucle de rebalancing qui dégrade fortement le débit global.",
+      en: "The trap is underestimating the impact of overly frequent rebalancing: message processing that takes too long and exceeds the max.poll.interval.ms delay can make Kafka think the consumer is dead and trigger an unnecessary rebalance, creating a rebalancing loop that badly degrades overall throughput.",
+    },
+    tags: ["consumer-groups", "rebalancing", "scaling"],
+  },
+  {
+    id: "kafka-exactly-once-semantics",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Comment Kafka permet-il d'obtenir une sémantique exactly-once, et pourquoi est-ce difficile par défaut ?",
+      en: "How does Kafka achieve exactly-once semantics, and why is it hard by default ?",
+    },
+    answer: {
+      fr: "Par défaut, Kafka offre une sémantique at-least-once : en cas de panne ou de retry, un message peut être livré plusieurs fois, car garantir qu'il est écrit exactement une fois demande de coordonner producteur, broker et consommateur de façon atomique, ce qui est intrinsèquement difficile dans un système distribué. Kafka propose deux mécanismes pour s'en rapprocher : le producteur idempotent, qui évite les doublons causés par les retries réseau grâce à un identifiant de séquence par producteur, et les transactions, qui permettent de regrouper plusieurs écritures, y compris sur plusieurs partitions ou topics, dans une unité atomique visible seulement si elle est validée entièrement.",
+      en: "By default, Kafka offers at-least-once semantics: in case of failure or retry, a message can be delivered more than once, because guaranteeing it's written exactly once requires atomically coordinating producer, broker and consumer, which is inherently hard in a distributed system. Kafka offers two mechanisms to get closer to exactly-once: the idempotent producer, which avoids duplicates caused by network retries through a per-producer sequence identifier, and transactions, which let you group multiple writes, including across several partitions or topics, into an atomic unit visible only if fully committed.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que exactly-once s'applique automatiquement de bout en bout dès qu'on active les transactions Kafka : la garantie ne couvre que l'écriture dans Kafka, si le consommateur produit un effet de bord externe, comme un appel HTTP ou une écriture en base, il faut aussi rendre ce traitement idempotent ou transactionnel de son côté.",
+      en: "The trap is believing exactly-once applies automatically end to end just by enabling Kafka transactions: the guarantee only covers the write into Kafka, if the consumer produces an external side effect, like an HTTP call or a database write, that processing also needs to be made idempotent or transactional on its own side.",
+    },
+    tags: ["exactly-once", "transactions", "reliability"],
+  },
+  {
+    id: "kafka-retention-vs-compaction",
+    topicId: "kafka",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre la rétention par durée et la compaction de logs sur un topic Kafka ?",
+      en: "What is the difference between time-based retention and log compaction on a Kafka topic ?",
+    },
+    answer: {
+      fr: "La rétention classique supprime les messages une fois qu'ils dépassent une durée ou une taille configurée, quel que soit leur contenu, ce qui convient pour un flux d'événements où seul l'historique récent compte. La compaction de logs, elle, ne conserve que le dernier message pour chaque clé, en supprimant les versions précédentes devenues obsolètes, ce qui garantit que l'état actuel de chaque clé reste toujours disponible même très longtemps après. La compaction convient bien à un topic utilisé comme changelog d'un état, par exemple la dernière valeur connue pour chaque identifiant utilisateur.",
+      en: "Classic retention deletes messages once they exceed a configured duration or size, regardless of their content, which fits an event stream where only recent history matters. Log compaction, instead, keeps only the latest message for each key, removing previous versions that have become obsolete, which guarantees the current state of every key stays available even much later. Compaction fits well for a topic used as a changelog of a state, for example the latest known value for each user identifier.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que la compaction supprime immédiatement les anciens messages dès qu'une nouvelle valeur arrive pour la même clé : la compaction s'exécute en arrière-plan à intervalles réguliers, donc plusieurs versions d'une même clé peuvent coexister un moment avant que le nettoyage n'ait lieu.",
+      en: "The trap is believing compaction immediately removes old messages as soon as a new value arrives for the same key: compaction runs in the background at regular intervals, so several versions of the same key can coexist for a while before cleanup actually happens.",
+    },
+    tags: ["log-compaction", "retention", "storage"],
+  },
+  {
+    id: "kafka-partition-key-ordering",
+    topicId: "kafka",
+    difficulty: "medium",
+    question: {
+      fr: "Comment le choix de la clé de partitionnement affecte-t-il l'ordre et la répartition des messages ?",
+      en: "How does the choice of partitioning key affect message ordering and distribution ?",
+    },
+    answer: {
+      fr: "Par défaut, le producteur calcule un hash de la clé du message pour déterminer sur quelle partition il atterrit : deux messages avec la même clé vont toujours vers la même partition, ce qui garantit leur ordre relatif l'un par rapport à l'autre. Choisir une bonne clé, comme un identifiant client pour garantir que tous ses événements arrivent dans l'ordre, est donc essentiel pour des traitements qui dépendent de la séquence des événements. Sans clé, les messages sont distribués en round-robin entre les partitions, ce qui maximise l'équilibrage de charge mais ne donne aucune garantie d'ordre entre eux.",
+      en: "By default, the producer hashes the message key to determine which partition it lands on: two messages with the same key always go to the same partition, which guarantees their relative order to each other. Choosing a good key, like a customer identifier to guarantee all their events arrive in order, is therefore essential for processing that depends on event sequence. Without a key, messages are distributed round-robin across partitions, which maximizes load balancing but gives no ordering guarantee between them.",
+    },
+    pitfall: {
+      fr: "Le piège est de choisir une clé avec très peu de valeurs distinctes, comme un statut à deux états : tous les messages avec la même clé finissent sur la même partition, créant un déséquilibre de charge sévère alors que les autres partitions restent sous-utilisées.",
+      en: "The trap is choosing a key with very few distinct values, like a two-state status: every message with that same key ends up on the same partition, creating a severe load imbalance while the other partitions stay underused.",
+    },
+    tags: ["partitioning", "ordering", "keys"],
+  },
+  {
+    id: "kafka-consumer-lag",
+    topicId: "kafka",
+    difficulty: "easy",
+    question: {
+      fr: "Qu'est-ce que le consumer lag, et pourquoi est-ce une métrique importante à surveiller ?",
+      en: "What is consumer lag, and why is it an important metric to monitor ?",
+    },
+    answer: {
+      fr: "Le consumer lag est l'écart entre le dernier offset écrit dans une partition par les producteurs et le dernier offset lu et validé par un consommateur : concrètement, c'est le nombre de messages en attente de traitement pour ce consommateur. Un lag qui reste stable ou proche de zéro indique que le consommateur suit le rythme de production. Un lag qui augmente en continu signale que le consommateur ne traite pas assez vite, ce qui peut annoncer un retard croissant dans le traitement des données ou, à terme, une saturation.",
+      en: "Consumer lag is the gap between the latest offset written to a partition by producers and the latest offset read and committed by a consumer: concretely, it's the number of messages waiting to be processed for that consumer. A lag that stays stable or close to zero indicates the consumer is keeping pace with production. A lag that keeps growing signals the consumer isn't processing fast enough, which can foreshadow a growing delay in data processing or, eventually, a saturation.",
+    },
+    pitfall: {
+      fr: "Le piège est de ne surveiller que la valeur absolue du lag sans regarder sa tendance dans le temps : un lag ponctuellement élevé après un pic de trafic peut être normal et se résorber tout seul, ce qui compte vraiment c'est de savoir si le lag croît durablement ou revient à la normale.",
+      en: "The trap is monitoring only the absolute lag value without looking at its trend over time: a temporarily high lag after a traffic spike can be normal and resolve on its own, what really matters is whether the lag keeps growing over time or returns to normal.",
+    },
+    tags: ["consumer-lag", "monitoring", "operations"],
+  },
+  {
+    id: "kafka-schema-registry",
+    topicId: "kafka",
+    difficulty: "medium",
+    question: {
+      fr: "À quoi sert un schema registry dans un écosystème Kafka ?",
+      en: "What is a schema registry for in a Kafka ecosystem ?",
+    },
+    answer: {
+      fr: "Un schema registry centralise et versionne les schémas des messages échangés sur les topics, en général au format Avro, Protobuf ou JSON Schema, plutôt que d'envoyer un schéma complet avec chaque message. Producteurs et consommateurs valident leurs messages contre le schéma enregistré, ce qui empêche un producteur de publier un format incompatible sans le savoir et permet aux consommateurs de désérialiser correctement les messages sans connaître le format à l'avance. Le registre applique aussi des règles de compatibilité entre versions, par exemple interdire de supprimer un champ obligatoire, pour éviter de casser des consommateurs existants lors d'une évolution du schéma.",
+      en: "A schema registry centralizes and versions the schemas of messages exchanged on topics, typically in Avro, Protobuf or JSON Schema format, rather than sending a full schema with every message. Producers and consumers validate their messages against the registered schema, which prevents a producer from unknowingly publishing an incompatible format and lets consumers correctly deserialize messages without knowing the format in advance. The registry also enforces compatibility rules between versions, for example forbidding the removal of a required field, to avoid breaking existing consumers when the schema evolves.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter le schema registry comme un simple outil de sérialisation optionnel : dans un système avec de nombreuses équipes qui produisent et consomment les mêmes topics, c'est surtout un contrat d'interface partagé qui évite les ruptures silencieuses entre services découplés.",
+      en: "The trap is treating the schema registry as a mere optional serialization tool: in a system with many teams producing and consuming the same topics, it's mainly a shared interface contract that prevents silent breakages between decoupled services.",
+    },
+    tags: ["schema-registry", "avro", "data-contracts"],
+  },
+
+  // Kotlin
+  {
+    id: "kotlin-null-safety",
+    topicId: "kotlin",
+    difficulty: "easy",
+    question: {
+      fr: "Comment Kotlin gère-t-il la nullabilité au niveau du système de types, et à quoi servent l'opérateur ?. et l'opérateur Elvis ?: ?",
+      en: "How does Kotlin handle nullability at the type system level, and what are the ?. safe call operator and the ?: Elvis operator for ?",
+    },
+    answer: {
+      fr: "Kotlin distingue au niveau du type lui-même un type nullable, comme String?, d'un type non nullable, comme String : le compilateur interdit d'assigner null à un type non nullable et oblige à gérer explicitement le cas nul pour un type nullable, ce qui élimine à la compilation une grande partie des NullPointerException qu'on trouve en Java. L'opérateur ?. effectue un appel seulement si la valeur n'est pas nulle, et renvoie null sinon, sans lever d'exception. L'opérateur Elvis ?: fournit une valeur de repli si l'expression à sa gauche est nulle, ce qui permet d'écrire une gestion de cas nul concise en une seule ligne.",
+      en: "Kotlin distinguishes at the type level itself a nullable type, like String?, from a non-nullable type, like String: the compiler forbids assigning null to a non-nullable type and forces explicit handling of the null case for a nullable type, which eliminates a large share of the NullPointerExceptions found in Java at compile time. The ?. operator performs a call only if the value isn't null, and returns null otherwise, without throwing an exception. The ?: Elvis operator supplies a fallback value if the expression on its left is null, letting you write concise null handling in a single line.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que Kotlin élimine totalement le risque de NullPointerException : l'opérateur !! force un accès non nul et relance une exception si la valeur est nulle malgré tout, et l'interopérabilité avec du code Java sans annotations de nullabilité peut introduire des valeurs nulles inattendues dans un type Kotlin supposé non nullable.",
+      en: "The trap is believing Kotlin fully eliminates the NullPointerException risk: the !! operator forces a non-null access and still throws if the value is null after all, and interop with Java code lacking nullability annotations can introduce unexpected null values into a Kotlin type assumed to be non-nullable.",
+    },
+    tags: ["null-safety", "type-system", "basics"],
+  },
+  {
+    id: "kotlin-data-class",
+    topicId: "kotlin",
+    difficulty: "easy",
+    question: {
+      fr: "Que génère automatiquement le mot-clé data devant une classe Kotlin ?",
+      en: "What does the data keyword automatically generate on a Kotlin class ?",
+    },
+    answer: {
+      fr: "Une data class génère automatiquement, à partir des propriétés déclarées dans le constructeur principal, les méthodes equals() et hashCode() basées sur le contenu, une méthode toString() lisible qui liste les propriétés et leurs valeurs, une méthode copy() qui permet de créer une nouvelle instance en ne modifiant que certains champs, et des fonctions componentN() qui permettent la déstructuration, comme val (id, name) = user. C'est l'équivalent Kotlin d'un objet valeur immuable qu'on écrirait à la main en Java avec beaucoup plus de code répétitif.",
+      en: "A data class automatically generates, from the properties declared in the primary constructor, content-based equals() and hashCode() methods, a readable toString() method listing the properties and their values, a copy() method that lets you create a new instance while only changing certain fields, and componentN() functions that enable destructuring, like val (id, name) = user. It's the Kotlin equivalent of an immutable value object you'd hand-write in Java with much more boilerplate.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que equals(), hashCode() et copy() ne prennent en compte que les propriétés déclarées dans le constructeur principal : une propriété ajoutée dans le corps de la classe n'entre pas dans ces comparaisons ni dans la copie, ce qui peut créer des bugs subtils si on s'y attend pas.",
+      en: "The trap is forgetting that equals(), hashCode() and copy() only account for properties declared in the primary constructor: a property added in the class body isn't included in those comparisons or in the copy, which can create subtle bugs if you don't expect it.",
+    },
+    tags: ["data-class", "language-features"],
+  },
+  {
+    id: "kotlin-coroutines-vs-threads",
+    topicId: "kotlin",
+    difficulty: "medium",
+    question: {
+      fr: "En quoi une coroutine Kotlin diffère-t-elle d'un thread classique ?",
+      en: "How does a Kotlin coroutine differ from a classic thread ?",
+    },
+    answer: {
+      fr: "Un thread est une ressource système gérée par le système d'exploitation, coûteuse à créer et limitée en nombre, car chacun réserve sa propre pile mémoire. Une coroutine est une unité de concurrence beaucoup plus légère, gérée par le runtime Kotlin plutôt que par l'OS : on peut en lancer des dizaines de milliers sans épuiser les ressources. Une fonction suspend peut suspendre son exécution sans bloquer le thread sous-jacent, qui reste alors libre d'exécuter d'autres coroutines pendant l'attente, par exemple le temps d'une réponse réseau, avant de reprendre là où elle s'était arrêtée.",
+      en: "A thread is a system resource managed by the operating system, expensive to create and limited in number, since each one reserves its own memory stack. A coroutine is a much lighter concurrency unit, managed by the Kotlin runtime rather than the OS: you can launch tens of thousands without exhausting resources. A suspend function can pause its execution without blocking the underlying thread, which stays free to run other coroutines during the wait, for example while a network response is pending, before resuming where it left off.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'une coroutine s'exécute forcément en parallèle sur un autre thread : par défaut, une coroutine peut très bien s'exécuter sur le même thread que celui qui l'a lancée, la concurrence réelle dépend du dispatcher utilisé, pas de la simple existence d'une coroutine.",
+      en: "The trap is believing a coroutine necessarily runs in parallel on a different thread: by default, a coroutine can perfectly well run on the same thread that launched it, actual concurrency depends on the dispatcher used, not on the mere existence of a coroutine.",
+    },
+    tags: ["coroutines", "concurrency", "threads"],
+  },
+  {
+    id: "kotlin-sealed-class",
+    topicId: "kotlin",
+    difficulty: "medium",
+    question: {
+      fr: "À quoi sert une sealed class, et en quoi améliore-t-elle un bloc when par rapport à une hiérarchie de classes classique ?",
+      en: "What is a sealed class for, and how does it improve a when block compared to a classic class hierarchy ?",
+    },
+    answer: {
+      fr: "Une sealed class restreint l'ensemble des sous-types possibles à ceux déclarés dans le même fichier ou module, ce qui donne au compilateur une connaissance complète et fermée de toutes les variantes existantes, contrairement à une classe ouverte que n'importe qui pourrait étendre ailleurs. Cette connaissance complète permet au compilateur de vérifier qu'un bloc when qui teste le type couvre bien tous les cas possibles, et de signaler une erreur de compilation si un cas est oublié, sans même avoir besoin d'une clause else. C'est particulièrement utile pour modéliser un résultat qui peut être, par exemple, un succès ou l'une de plusieurs erreurs distinctes.",
+      en: "A sealed class restricts the set of possible subtypes to those declared in the same file or module, giving the compiler complete, closed knowledge of every existing variant, unlike an open class that anyone could extend elsewhere. That complete knowledge lets the compiler verify that a when block testing the type covers every possible case, and flag a compile error if a case is missed, without even needing an else clause. This is particularly useful for modeling a result that can be, for example, a success or one of several distinct errors.",
+    },
+    pitfall: {
+      fr: "Le piège est d'ajouter une clause else par réflexe dans un when exhaustif sur une sealed class : ça désactive silencieusement la vérification d'exhaustivité du compilateur, un nouveau sous-type ajouté plus tard tombera dans le else au lieu de déclencher une erreur de compilation qui forcerait à le traiter explicitement.",
+      en: "The trap is adding an else clause out of habit in a when block that's exhaustive over a sealed class: it silently disables the compiler's exhaustiveness check, a new subtype added later will fall into the else instead of triggering a compile error that would force you to handle it explicitly.",
+    },
+    tags: ["sealed-class", "when-expression", "type-safety"],
+  },
+  {
+    id: "kotlin-extension-functions",
+    topicId: "kotlin",
+    difficulty: "medium",
+    question: {
+      fr: "Comment fonctionnent les fonctions d'extension en Kotlin, et quelle est leur limite fondamentale par rapport à une vraie méthode de la classe ?",
+      en: "How do Kotlin extension functions work, and what is their fundamental limitation compared to a real method of the class ?",
+    },
+    answer: {
+      fr: "Une fonction d'extension permet d'ajouter une méthode apparente à une classe existante, y compris une classe qu'on ne peut pas modifier comme String ou une classe d'une librairie tierce, sans hériter ni la modifier. En réalité, le compilateur la transforme en une fonction statique classique qui prend l'objet receveur en premier paramètre : ce n'est donc que du sucre syntaxique, l'extension n'a pas accès aux membres privés de la classe et ne peut pas non plus être surchargée de façon polymorphique comme une vraie méthode virtuelle.",
+      en: "An extension function lets you add a method that appears to belong to an existing class, including a class you can't modify like String or one from a third-party library, without inheriting from it or modifying it. In reality, the compiler turns it into a plain static function that takes the receiver object as its first parameter: it's therefore only syntactic sugar, the extension has no access to the class's private members and also can't be polymorphically overridden like a real virtual method.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est d'oublier que la résolution d'une fonction d'extension se fait de façon statique, au type déclaré de la variable et non à son type réel à l'exécution : si une sous-classe redéfinit une extension avec la même signature, c'est le type déclaré de la référence qui détermine quelle version est appelée, contrairement au polymorphisme dynamique d'une vraie méthode.",
+      en: "The classic interview trap is forgetting that extension function resolution happens statically, based on the variable's declared type rather than its actual runtime type: if a subclass redefines an extension with the same signature, it's the reference's declared type that determines which version is called, unlike the dynamic polymorphism of a real method.",
+    },
+    tags: ["extension-functions", "language-features"],
+  },
+  {
+    id: "kotlin-scope-functions",
+    topicId: "kotlin",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre let, apply et also, les fonctions de portée les plus utilisées en Kotlin ?",
+      en: "What is the difference between let, apply and also, the most commonly used Kotlin scope functions ?",
+    },
+    answer: {
+      fr: "Les trois exécutent un bloc de code dans le contexte d'un objet, mais diffèrent sur deux points : comment on référence l'objet à l'intérieur du bloc, et ce que la fonction retourne. let référence l'objet via it et retourne le résultat du bloc, ce qui convient pour transformer une valeur ou exécuter du code seulement si elle n'est pas nulle. apply référence l'objet via this et retourne l'objet lui-même, ce qui convient pour configurer un objet juste après sa création en enchaînant des appels. also référence l'objet via it comme let mais retourne l'objet lui-même comme apply, ce qui convient pour exécuter un effet de bord, comme un log, sans interrompre une chaîne d'appels sur l'objet original.",
+      en: "All three run a block of code in the context of an object, but differ on two points: how the object is referenced inside the block, and what the function returns. let references the object via it and returns the block's result, which fits transforming a value or running code only if it isn't null. apply references the object via this and returns the object itself, which fits configuring an object right after creation by chaining calls. also references the object via it like let but returns the object itself like apply, which fits running a side effect, like a log, without interrupting a chain of calls on the original object.",
+    },
+    pitfall: {
+      fr: "Le piège est de choisir la fonction de portée en fonction de l'habitude plutôt que de ce qu'elle retourne réellement : utiliser apply là où on voulait en fait le résultat transformé du bloc, comme le ferait let, fait continuer la chaîne sur l'objet d'origine au lieu du résultat attendu, une source fréquente de bugs silencieux.",
+      en: "The trap is picking a scope function out of habit rather than based on what it actually returns: using apply where you actually wanted the block's transformed result, like let would give, keeps the chain going on the original object instead of the expected result, a frequent source of silent bugs.",
+    },
+    tags: ["scope-functions", "language-features", "idioms"],
+  },
+  {
+    id: "kotlin-coroutine-dispatchers",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre Dispatchers.IO et Dispatchers.Default, et qu'apporte la programmation concurrente structurée des coroutines ?",
+      en: "What is the difference between Dispatchers.IO and Dispatchers.Default, and what does coroutines' structured concurrency provide ?",
+    },
+    answer: {
+      fr: "Dispatchers.Default utilise un pool de threads dimensionné sur le nombre de cœurs CPU disponibles, adapté au calcul intensif en mémoire. Dispatchers.IO utilise un pool beaucoup plus large de threads, conçu pour des opérations qui passent le plus clair de leur temps à attendre, comme un appel réseau ou une lecture disque, où bloquer un thread coûte peu tant que le pool peut en absorber beaucoup en parallèle. La programmation concurrente structurée, elle, garantit qu'une coroutine enfant ne peut pas survivre à son scope parent : si le parent est annulé ou lève une exception, toutes les coroutines enfants sont automatiquement annulées, ce qui évite les fuites de coroutines orphelines qui continueraient à tourner sans qu'on le sache.",
+      en: "Dispatchers.Default uses a thread pool sized to the number of available CPU cores, suited for memory-intensive computation. Dispatchers.IO uses a much larger thread pool, designed for operations that spend most of their time waiting, like a network call or a disk read, where blocking a thread costs little as long as the pool can absorb many of them in parallel. Structured concurrency, meanwhile, guarantees a child coroutine can't outlive its parent scope: if the parent is cancelled or throws, every child coroutine is automatically cancelled, avoiding leaks of orphan coroutines that would keep running unnoticed.",
+    },
+    pitfall: {
+      fr: "Le piège classique est de lancer une coroutine avec GlobalScope plutôt que dans un scope structuré lié au cycle de vie du composant appelant : ça casse la concurrence structurée, la coroutine continue de vivre indépendamment et peut fuiter des ressources bien après que le composant qui l'a lancée a disparu.",
+      en: "The classic trap is launching a coroutine with GlobalScope rather than within a structured scope tied to the calling component's lifecycle: it breaks structured concurrency, the coroutine keeps living independently and can leak resources long after the component that launched it is gone.",
+    },
+    tags: ["coroutines", "dispatchers", "structured-concurrency"],
+  },
+  {
+    id: "kotlin-inline-functions-reified",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi le mot-clé inline est-il nécessaire pour utiliser des generics reified en Kotlin ?",
+      en: "Why is the inline keyword required to use reified generics in Kotlin ?",
+    },
+    answer: {
+      fr: "Comme en Java, les informations de type générique sont normalement effacées à la compilation : une fonction générique classique ne peut donc pas savoir à l'exécution quel type concret T représente, par exemple pour faire T::class ou is T. Le mot-clé inline change ce comportement : le compilateur copie littéralement le corps de la fonction à chaque site d'appel plutôt que de générer un appel de fonction classique, ce qui fait qu'à chaque endroit où la fonction inline est utilisée, le compilateur connaît le type concret réellement fourni et peut le substituer directement dans le code généré. Combiné avec reified sur le paramètre de type, ça permet d'accéder à l'information de type générique à l'exécution comme si elle n'avait jamais été effacée.",
+      en: "As in Java, generic type information is normally erased at compile time: a classic generic function therefore can't know at runtime what concrete type T represents, for example to do T::class or is T. The inline keyword changes this: the compiler literally copies the function's body into every call site rather than generating a classic function call, which means that at every place the inline function is used, the compiler knows the actual concrete type supplied and can substitute it directly into the generated code. Combined with reified on the type parameter, this lets you access generic type information at runtime as if it had never been erased.",
+    },
+    pitfall: {
+      fr: "Le piège est d'abuser des fonctions inline pour des corps de fonction volumineux : comme le code est dupliqué à chaque site d'appel plutôt que centralisé, ça augmente la taille du bytecode généré, l'inline reified doit rester réservé aux cas où on a vraiment besoin d'accéder au type générique à l'exécution, pas utilisé par défaut pour toute fonction générique.",
+      en: "The trap is overusing inline functions for large function bodies: since the code gets duplicated at every call site rather than centralized, it increases the generated bytecode size, inline reified should stay reserved for cases where you genuinely need runtime access to the generic type, not used by default for every generic function.",
+    },
+    tags: ["inline-functions", "reified-generics", "advanced"],
+  },
+
+  // GitHub Copilot & AI-assisted development
+  {
+    id: "copilot-what-it-does",
+    topicId: "copilot",
+    difficulty: "easy",
+    question: {
+      fr: "Concrètement, comment fonctionne GitHub Copilot pour générer ses suggestions de code ?",
+      en: "Concretely, how does GitHub Copilot work to generate its code suggestions ?",
+    },
+    answer: {
+      fr: "Copilot analyse le contexte local du fichier en cours d'édition, souvent complété par d'autres fichiers ouverts ou liés dans l'éditeur, et envoie ce contexte à un modèle de langage entraîné sur de grandes quantités de code source. Le modèle prédit la suite la plus probable du code étant donné ce contexte, un peu comme la complétion prédictive d'un clavier mais appliquée au code, et propose une ou plusieurs suggestions que le développeur peut accepter, modifier ou ignorer. Ce n'est pas un moteur de recherche qui retrouve du code existant : chaque suggestion est générée, pas copiée telle quelle depuis une source précise.",
+      en: "Copilot analyzes the local context of the file being edited, often supplemented by other open or related files in the editor, and sends that context to a language model trained on large amounts of source code. The model predicts the most likely continuation of the code given that context, somewhat like a keyboard's predictive completion but applied to code, and proposes one or more suggestions the developer can accept, edit or ignore. It's not a search engine retrieving existing code: each suggestion is generated, not copied verbatim from a specific source.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que Copilot comprend l'intention métier du projet au même titre qu'un développeur : il prédit une suite plausible de code d'après des patterns statistiques, pas d'après une compréhension réelle des règles métier, d'où l'importance de toujours relire les suggestions avec l'œil critique du contexte réel.",
+      en: "The trap is believing Copilot understands the project's business intent the way a developer would: it predicts a plausible continuation of code based on statistical patterns, not on real understanding of business rules, which is why suggestions always need a critical read against the actual context.",
+    },
+    tags: ["copilot-basics", "code-completion", "llm"],
+  },
+  {
+    id: "copilot-context-relevance",
+    topicId: "copilot",
+    difficulty: "medium",
+    question: {
+      fr: "Pourquoi la pertinence des suggestions de Copilot varie-t-elle autant selon les fichiers ouverts dans l'éditeur ?",
+      en: "Why does the relevance of Copilot's suggestions vary so much depending on the files open in the editor ?",
+    },
+    answer: {
+      fr: "Copilot construit son contexte de génération en grande partie à partir de ce qui est visible et ouvert dans l'éditeur au moment de la suggestion : les noms de variables, les conventions de style, les fonctions déjà définies dans le fichier ou dans des fichiers liés récemment consultés. Plus ce contexte contient d'indices pertinents, comme un fichier de test qui montre déjà le comportement attendu, ou une interface qui définit clairement le contrat à implémenter, plus les suggestions collent au besoin réel. À l'inverse, un fichier isolé sans contexte suffisant amène le modèle à se rabattre sur des patterns génériques plausibles mais pas forcément adaptés au projet.",
+      en: "Copilot builds its generation context largely from what's visible and open in the editor at the time of the suggestion: variable names, style conventions, functions already defined in the file or in recently visited related files. The more that context contains relevant clues, like a test file that already shows the expected behavior, or an interface that clearly defines the contract to implement, the more suggestions match the actual need. Conversely, an isolated file without enough context leads the model to fall back on generic but plausible patterns not necessarily suited to the project.",
+    },
+    pitfall: {
+      fr: "Le piège est de considérer la qualité des suggestions comme une propriété fixe de l'outil plutôt que comme quelque chose qu'on peut activement améliorer : ouvrir le bon fichier de contexte, écrire une signature de fonction claire ou un commentaire d'intention avant de générer change concrètement la qualité de ce qui est proposé.",
+      en: "The trap is treating suggestion quality as a fixed property of the tool rather than something you can actively improve: opening the right context file, writing a clear function signature or an intent comment before generating concretely changes the quality of what gets suggested.",
+    },
+    tags: ["context", "developer-experience"],
+  },
+  {
+    id: "copilot-code-review-risk",
+    topicId: "copilot",
+    difficulty: "medium",
+    question: {
+      fr: "Pourquoi le code accepté depuis Copilot ne doit-il pas échapper à une revue de code normale ?",
+      en: "Why shouldn't code accepted from Copilot skip normal code review ?",
+    },
+    answer: {
+      fr: "Une suggestion acceptée reste écrite par un modèle statistique qui optimise la plausibilité du code, pas sa correction fonctionnelle, sa sécurité, ni sa conformité aux règles métier spécifiques du projet, qu'il ne connaît que partiellement à travers le contexte visible. Le code généré peut donc compiler et sembler raisonnable tout en contenant une erreur de logique subtile, une faille de sécurité connue reproduite parce qu'elle apparaît fréquemment dans les données d'entraînement, ou simplement ne pas respecter une convention interne à l'équipe. La revue de code reste le filet de sécurité qui vérifie ce que l'outil ne peut pas garantir par construction.",
+      en: "An accepted suggestion is still written by a statistical model that optimizes for code plausibility, not for functional correctness, security, or compliance with the project's specific business rules, which it only partially knows through the visible context. Generated code can therefore compile and look reasonable while containing a subtle logic error, a known security flaw reproduced because it appears frequently in the training data, or simply not follow an internal team convention. Code review remains the safety net checking what the tool can't guarantee by construction.",
+    },
+    pitfall: {
+      fr: "Le piège est de baisser la vigilance en revue parce que le code semble bien écrit et idiomatique : un code généré par IA a justement tendance à avoir un style propre et convaincant en apparence, ce qui peut donner une fausse impression de confiance et faire passer plus facilement une erreur de fond inaperçue.",
+      en: "The trap is lowering vigilance during review because the code looks well-written and idiomatic: AI-generated code actually tends to have a clean, convincing surface style, which can create a false sense of confidence and let a substantive error slip through unnoticed more easily.",
+    },
+    tags: ["code-review", "quality", "risk"],
+  },
+  {
+    id: "copilot-license-ip-concerns",
+    topicId: "copilot",
+    difficulty: "medium",
+    question: {
+      fr: "Quelles sont les préoccupations juridiques classiques liées à l'usage d'un outil comme Copilot dans un projet d'entreprise ?",
+      en: "What are the classic legal concerns around using a tool like Copilot in a company project ?",
+    },
+    answer: {
+      fr: "Le modèle sous-jacent a été entraîné sur de vastes quantités de code source, y compris du code sous licence open source avec des conditions variées, ce qui soulève la question de savoir si une suggestion générée pourrait reproduire, même partiellement, un extrait suffisamment proche d'un code source protégé pour poser un problème de licence ou de droit d'auteur. Les outils modernes intègrent des filtres pour détecter et bloquer les suggestions trop proches d'un code source connu, mais le risque n'est pas nul. C'est pourquoi de nombreuses entreprises encadrent l'usage de ces outils par une politique claire, qui définit ce qui peut être généré, comment vérifier l'absence de code protégé, et qui reste responsable du code final livré.",
+      en: "The underlying model was trained on vast amounts of source code, including open source code under varied license terms, which raises the question of whether a generated suggestion could reproduce, even partially, an extract close enough to protected source code to raise a license or copyright issue. Modern tools include filters to detect and block suggestions too close to known source code, but the risk isn't zero. This is why many companies frame the use of these tools with a clear policy, defining what can be generated, how to verify the absence of protected code, and who remains responsible for the final delivered code.",
+    },
+    pitfall: {
+      fr: "Le piège est de considérer que la question juridique ne concerne que l'éditeur de l'outil et pas l'entreprise utilisatrice : en pratique, la responsabilité du code livré en production reste celle de l'entreprise et de ses développeurs, d'où l'importance d'une politique d'usage claire plutôt que de laisser chacun décider seul.",
+      en: "The trap is assuming the legal question only concerns the tool vendor and not the using company: in practice, responsibility for code shipped to production remains with the company and its developers, which is why a clear usage policy matters more than leaving everyone to decide on their own.",
+    },
+    tags: ["licensing", "intellectual-property", "governance"],
+  },
+  {
+    id: "copilot-vs-chat-based-assistants",
+    topicId: "copilot",
+    difficulty: "easy",
+    question: {
+      fr: "Quelle est la différence entre la complétion inline de Copilot et un assistant conversationnel comme Claude Code ou une session de chat ?",
+      en: "What is the difference between Copilot's inline completion and a conversational assistant like Claude Code or a chat session ?",
+    },
+    answer: {
+      fr: "La complétion inline propose une suite de code directement dans l'éditeur, ligne par ligne ou bloc par bloc, pendant que le développeur écrit, avec un contexte limité à ce qui est immédiatement visible autour du curseur. Un assistant conversationnel comme Claude Code fonctionne en dialogue : on lui décrit un besoin en langage naturel, il peut explorer plusieurs fichiers du projet, exécuter des commandes, planifier une série de modifications avant de les appliquer, et itérer sur plusieurs tours d'échange. La complétion convient bien pour accélérer l'écriture ligne à ligne, l'assistant conversationnel convient mieux pour des tâches qui demandent de comprendre et de modifier une portion plus large du projet.",
+      en: "Inline completion suggests a continuation of code directly in the editor, line by line or block by block, as the developer types, with context limited to what's immediately visible around the cursor. A conversational assistant like Claude Code works through dialogue: you describe a need in natural language, it can explore multiple files in the project, run commands, plan a series of changes before applying them, and iterate over several turns of exchange. Completion fits well for speeding up line-by-line writing, the conversational assistant fits better for tasks that require understanding and modifying a larger portion of the project.",
+    },
+    pitfall: {
+      fr: "Le piège est de vouloir résoudre un besoin de refactoring multi-fichiers en s'appuyant uniquement sur des complétions inline enchaînées : le manque de vision d'ensemble du projet fait que chaque suggestion locale peut sembler correcte tout en étant incohérente avec les autres, un assistant conversationnel avec accès à tout le projet est mieux outillé pour ce genre de tâche.",
+      en: "The trap is trying to solve a multi-file refactoring need by relying only on chained inline completions: the lack of a whole-project view means each local suggestion can look correct while being inconsistent with the others, a conversational assistant with access to the whole project is better equipped for that kind of task.",
+    },
+    tags: ["tooling-comparison", "developer-workflow"],
+  },
+  {
+    id: "copilot-prompt-comments",
+    topicId: "copilot",
+    difficulty: "medium",
+    question: {
+      fr: "Comment un commentaire bien écrit avant une fonction peut-il améliorer la qualité des suggestions de Copilot ?",
+      en: "How can a well-written comment before a function improve the quality of Copilot's suggestions ?",
+    },
+    answer: {
+      fr: "Un commentaire qui décrit clairement l'intention, les cas particuliers à gérer et le comportement attendu en cas d'erreur donne au modèle une information explicite qu'il n'aurait sinon qu'à deviner à partir du nom de la fonction et du code environnant. C'est en pratique une forme de prompt engineering appliqué directement dans le code source : plus l'intention est explicite et sans ambiguïté, plus la suggestion générée a de chances de correspondre au besoin réel dès la première proposition, plutôt que de nécessiter plusieurs retouches manuelles.",
+      en: "A comment that clearly describes the intent, the edge cases to handle and the expected error behavior gives the model explicit information it would otherwise only guess from the function name and surrounding code. This is, in practice, a form of prompt engineering applied directly in the source code: the more explicit and unambiguous the intent, the more likely the generated suggestion matches the actual need on the first try, rather than requiring several manual touch-ups.",
+    },
+    pitfall: {
+      fr: "Le piège est de rédiger après coup des commentaires qui décrivent ce que fait le code plutôt que ce qu'il doit faire, dans le seul but de guider Copilot : ça produit des commentaires redondants qui n'ont plus d'utilité une fois la fonction écrite, mieux vaut réserver ce commentaire d'intention au moment où on écrit vraiment la fonction et le garder seulement s'il apporte une information non triviale au lecteur humain aussi.",
+      en: "The trap is writing comments after the fact that describe what the code does rather than what it should do, solely to steer Copilot: that produces redundant comments with no ongoing purpose once the function is written, it's better to reserve that intent comment for when you're actually writing the function and keep it only if it also gives a human reader non-trivial information.",
+    },
+    tags: ["prompting", "developer-workflow", "best-practices"],
+  },
+  {
+    id: "copilot-security-risks",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "Quels sont les risques de sécurité spécifiques liés à l'usage massif d'un outil comme Copilot dans une équipe ?",
+      en: "What are the specific security risks of widespread use of a tool like Copilot in a team ?",
+    },
+    answer: {
+      fr: "Le modèle a été entraîné sur du code réel, y compris du code contenant des vulnérabilités connues ou des mauvaises pratiques de sécurité, comme des requêtes SQL construites par concaténation ou une gestion faible des mots de passe : il peut reproduire ces patterns défaillants si le contexte y invite, sans signaler qu'il s'agit d'une pratique risquée. Un autre risque concerne les secrets : un développeur qui laisse traîner une clé API ou un mot de passe en dur dans un fichier ouvert augmente le risque que ce secret réapparaisse, sous une forme ou une autre, dans une suggestion future issue de ce même contexte. Une équipe qui adopte massivement l'outil doit donc renforcer, pas relâcher, ses pratiques de revue de sécurité et de gestion des secrets.",
+      en: "The model was trained on real code, including code containing known vulnerabilities or poor security practices, like SQL queries built through concatenation or weak password handling: it can reproduce these flawed patterns if the context invites it, without flagging that it's a risky practice. Another risk concerns secrets: a developer who leaves an API key or a hardcoded password lingering in an open file increases the risk of that secret reappearing, in some form, in a future suggestion drawn from that same context. A team that adopts the tool at scale therefore needs to strengthen, not relax, its security review and secrets management practices.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter les outils d'analyse de sécurité automatisée comme redondants une fois Copilot en place, sous prétexte que le code généré paraît propre : au contraire, la vitesse de production de code augmente le volume à auditer, ce qui renforce le besoin d'outils de scan automatisé plutôt que de le réduire.",
+      en: "The trap is treating automated security scanning tools as redundant once Copilot is in place, on the assumption that generated code looks clean: on the contrary, the increased speed of code production raises the volume that needs auditing, which strengthens the need for automated scanning tools rather than reducing it.",
+    },
+    tags: ["security", "risk-management", "governance"],
+  },
+  {
+    id: "copilot-productivity-measurement",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi le nombre de lignes de code générées est-il un mauvais indicateur pour mesurer le gain de productivité apporté par un outil comme Copilot ?",
+      en: "Why is the number of generated lines of code a poor indicator for measuring the productivity gain from a tool like Copilot ?",
+    },
+    answer: {
+      fr: "Le volume de code produit ne dit rien sur sa qualité, sa maintenabilité, ni sur le temps réellement gagné une fois qu'on compte aussi le temps passé à relire, corriger et parfois défaire des suggestions inadaptées. Un code plus verbeux ou plus copié-collé de patterns génériques peut même faire augmenter artificiellement ce chiffre tout en dégradant la qualité globale du projet. Des indicateurs plus pertinents regardent plutôt le temps total du cycle de développement d'une fonctionnalité, le taux de retour en revue de code, ou la fréquence des bugs en production sur le code produit avec assistance IA comparé à sans, des mesures plus difficiles à collecter mais bien plus représentatives de l'impact réel.",
+      en: "The volume of code produced says nothing about its quality, its maintainability, or the time actually saved once you also count time spent reviewing, fixing and sometimes undoing unsuitable suggestions. More verbose code or more copy-pasted generic patterns can even artificially inflate that number while degrading the project's overall quality. More relevant indicators instead look at a feature's total development cycle time, the code review rejection rate, or the frequency of production bugs in code produced with AI assistance compared to without, harder metrics to collect but far more representative of the actual impact.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de proposer une métrique facile à mesurer, comme les lignes de code ou le nombre de suggestions acceptées, sans questionner si elle capture vraiment ce qu'on cherche à évaluer : une bonne métrique de productivité doit rester connectée à la valeur livrée et à la qualité, pas seulement au volume produit.",
+      en: "The interview trap is proposing an easy-to-measure metric, like lines of code or the number of accepted suggestions, without questioning whether it truly captures what's being evaluated: a good productivity metric needs to stay connected to delivered value and quality, not just to volume produced.",
+    },
+    tags: ["productivity", "metrics", "engineering-management"],
+  },
+
+  // AWS
+  {
+    id: "aws-ec2-vs-lambda",
+    topicId: "aws",
+    difficulty: "easy",
+    question: {
+      fr: "Quand choisir AWS Lambda plutôt qu'EC2 pour héberger une charge applicative ?",
+      en: "When should you choose AWS Lambda over EC2 to host an application workload ?",
+    },
+    answer: {
+      fr: "EC2 fournit des machines virtuelles classiques, dont on gère soi-même le système d'exploitation, le dimensionnement et la disponibilité continue, ce qui donne un contrôle complet mais une facturation liée au temps d'allumage de l'instance, qu'elle soit utilisée ou non. Lambda est un service serverless qui exécute une fonction en réponse à un déclencheur, comme une requête HTTP ou un message de file, sans gestion de serveur, avec une facturation au temps d'exécution réel et un scaling automatique jusqu'à zéro en l'absence d'appels. Lambda convient bien à des traitements courts et déclenchés par événement, EC2 reste pertinent pour des charges continues qui ont besoin d'un contrôle fin de l'environnement ou d'une durée d'exécution longue au-delà des limites de Lambda.",
+      en: "EC2 provides classic virtual machines, where you manage the operating system, sizing and continuous availability yourself, giving full control but billing tied to instance uptime, whether it's used or not. Lambda is a serverless service that runs a function in response to a trigger, like an HTTP request or a queue message, with no server management, billing for actual execution time and automatic scaling down to zero when there are no calls. Lambda fits well for short, event-triggered processing, EC2 remains relevant for continuous workloads that need fine-grained control over the environment or execution durations longer than Lambda's limits allow.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier la limite de durée d'exécution d'une fonction Lambda et le cold start pour une fonction peu sollicitée : un traitement long ou une charge qui a besoin d'une latence constamment faible, même après une période d'inactivité, se prête souvent mieux à EC2 ou à un service conteneurisé toujours actif.",
+      en: "The trap is forgetting a Lambda function's execution duration limit and the cold start for an infrequently called function: long-running processing or a workload that needs consistently low latency, even after a period of inactivity, often fits EC2 or an always-on containerized service better.",
+    },
+    tags: ["ec2", "lambda", "serverless"],
+  },
+  {
+    id: "aws-iam-roles-vs-users",
+    topicId: "aws",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre un rôle IAM et un utilisateur IAM sur AWS, et pourquoi préfère-t-on les rôles pour les charges applicatives ?",
+      en: "What is the difference between an IAM role and an IAM user on AWS, and why are roles preferred for application workloads ?",
+    },
+    answer: {
+      fr: "Un utilisateur IAM représente une identité durable, en général associée à une personne, avec des identifiants d'accès à long terme qu'il faut stocker et faire tourner régulièrement. Un rôle IAM ne possède pas d'identifiants permanents : il définit un ensemble de permissions que différentes entités, comme une instance EC2, une fonction Lambda, ou même un utilisateur d'un autre compte AWS, peuvent endosser temporairement pour obtenir des identifiants de courte durée générés à la volée. Pour une charge applicative, un rôle évite d'avoir à stocker en dur des identifiants permanents dans le code ou la configuration, ce qui réduit fortement le risque en cas de fuite.",
+      en: "An IAM user represents a durable identity, generally tied to a person, with long-term access credentials that need to be stored and rotated regularly. An IAM role holds no permanent credentials: it defines a set of permissions that different entities, like an EC2 instance, a Lambda function, or even a user from another AWS account, can temporarily assume to obtain short-lived credentials generated on the fly. For an application workload, a role avoids having to hardcode permanent credentials in code or configuration, which strongly reduces the risk in case of a leak.",
+    },
+    pitfall: {
+      fr: "Le piège classique est de créer un utilisateur IAM dédié avec une clé d'accès permanente pour une application qui tourne sur EC2 ou Lambda, par simplicité, au lieu d'attacher un rôle à la ressource : ça expose une clé longue durée à un risque de fuite qu'un rôle avec identifiants temporaires évite par construction.",
+      en: "The classic trap is creating a dedicated IAM user with a permanent access key for an application running on EC2 or Lambda, for simplicity, instead of attaching a role to the resource: that exposes a long-lived key to a leak risk that a role with temporary credentials avoids by design.",
+    },
+    tags: ["iam", "security", "roles"],
+  },
+  {
+    id: "aws-s3-storage-classes",
+    topicId: "aws",
+    difficulty: "easy",
+    question: {
+      fr: "Quelles sont les principales classes de stockage S3, et sur quel critère choisir entre elles ?",
+      en: "What are the main S3 storage classes, and what criterion should you use to choose between them ?",
+    },
+    answer: {
+      fr: "S3 Standard convient aux données consultées fréquemment, avec une disponibilité et une latence optimales. S3 Standard-IA (Infrequent Access) réduit le coût de stockage pour des données accédées occasionnellement, au prix d'un coût par accès plus élevé. S3 Glacier et Glacier Deep Archive offrent le stockage le moins cher pour des données rarement consultées, comme des archives de conformité, mais avec un délai de récupération qui va de quelques minutes à plusieurs heures selon le niveau choisi. Le bon critère de choix reste la fréquence d'accès attendue et la tolérance à la latence de récupération, pas seulement le coût de stockage brut.",
+      en: "S3 Standard fits frequently accessed data, with optimal availability and latency. S3 Standard-IA (Infrequent Access) lowers storage cost for occasionally accessed data, at the price of a higher per-access cost. S3 Glacier and Glacier Deep Archive offer the cheapest storage for rarely accessed data, like compliance archives, but with a retrieval delay ranging from a few minutes to several hours depending on the tier chosen. The right criterion remains the expected access frequency and tolerance for retrieval latency, not just the raw storage cost.",
+    },
+    pitfall: {
+      fr: "Le piège est de choisir Glacier uniquement sur le critère du coût de stockage sans anticiper un besoin de récupération urgente : si les données doivent parfois être récupérées rapidement, le délai de restauration de plusieurs heures de l'option la moins chère peut devenir un vrai problème opérationnel.",
+      en: "The trap is choosing Glacier based only on storage cost without anticipating a need for urgent retrieval: if the data sometimes needs to be retrieved quickly, the multi-hour restore delay of the cheapest option can become a real operational problem.",
+    },
+    tags: ["s3", "storage-classes", "cost-optimization"],
+  },
+  {
+    id: "aws-vpc-basics",
+    topicId: "aws",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre un sous-réseau public et un sous-réseau privé dans un VPC AWS ?",
+      en: "What is the difference between a public subnet and a private subnet in an AWS VPC ?",
+    },
+    answer: {
+      fr: "Un sous-réseau est public quand sa table de routage contient une route vers une Internet Gateway, ce qui permet aux ressources qui y résident, avec une adresse IP publique, de communiquer directement avec Internet. Un sous-réseau est privé quand il n'a pas de route directe vers une Internet Gateway : les ressources qui y résident restent inaccessibles depuis Internet, et si elles ont besoin d'initier des connexions sortantes, comme télécharger une mise à jour, elles passent par une NAT Gateway placée dans un sous-réseau public. L'architecture classique place les ressources exposées, comme un load balancer, dans un sous-réseau public, et les ressources sensibles, comme une base de données, dans un sous-réseau privé.",
+      en: "A subnet is public when its route table contains a route to an Internet Gateway, letting resources residing there, with a public IP address, communicate directly with the internet. A subnet is private when it has no direct route to an Internet Gateway: resources residing there stay unreachable from the internet, and if they need to initiate outbound connections, like downloading an update, they go through a NAT Gateway placed in a public subnet. The classic architecture places exposed resources, like a load balancer, in a public subnet, and sensitive resources, like a database, in a private subnet.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'une ressource dans un sous-réseau privé est automatiquement isolée de tout accès sortant vers Internet : sans NAT Gateway configurée, elle ne peut effectivement rien joindre à l'extérieur, mais dès qu'une NAT Gateway est en place, elle garde un accès sortant, ce qui doit rester un choix explicite et pas une supposition par défaut.",
+      en: "The trap is assuming a resource in a private subnet is automatically isolated from all outbound internet access: without a NAT Gateway configured, it indeed can't reach anything outside, but as soon as a NAT Gateway is in place, it keeps outbound access, which should remain an explicit choice rather than a default assumption.",
+    },
+    tags: ["vpc", "networking", "security"],
+  },
+  {
+    id: "aws-rds-vs-dynamodb",
+    topicId: "aws",
+    difficulty: "medium",
+    question: {
+      fr: "Quand choisir DynamoDB plutôt que RDS pour un nouveau service ?",
+      en: "When should you choose DynamoDB over RDS for a new service ?",
+    },
+    answer: {
+      fr: "RDS gère des moteurs relationnels classiques comme PostgreSQL ou MySQL, avec un schéma structuré, des jointures et des transactions ACID complètes, un choix naturel quand les données ont des relations complexes et que les requêtes évoluent de façon imprévisible au fil du projet. DynamoDB est une base de données clé-valeur et documents entièrement managée, sans schéma fixe, conçue pour scaler horizontalement avec une latence à un chiffre de milliseconde de façon prévisible, à condition de connaître à l'avance les patterns d'accès aux données pour bien concevoir les clés de partition. DynamoDB devient pertinent quand le volume et le débit sont très élevés et que les patterns de requête sont stables et connus dès la conception.",
+      en: "RDS manages classic relational engines like PostgreSQL or MySQL, with a structured schema, joins and full ACID transactions, a natural choice when data has complex relationships and queries evolve unpredictably over the project's life. DynamoDB is a fully managed key-value and document database, with no fixed schema, designed to scale horizontally with predictable single-digit millisecond latency, provided the data access patterns are known upfront to design good partition keys. DynamoDB becomes relevant when volume and throughput are very high and query patterns are stable and known at design time.",
+    },
+    pitfall: {
+      fr: "Le piège est de choisir DynamoDB par défaut pour sa réputation de scalabilité sans avoir anticipé les patterns d'accès aux données : contrairement à une base relationnelle où on peut ajouter une nouvelle requête assez librement, changer un pattern d'accès non prévu en DynamoDB implique souvent de revoir la conception des clés, une contrainte de conception forte à assumer dès le départ.",
+      en: "The trap is choosing DynamoDB by default for its scalability reputation without having anticipated the data access patterns: unlike a relational database where you can add a new query fairly freely, changing an unplanned access pattern in DynamoDB often requires rethinking the key design, a strong design constraint that needs to be accepted from the start.",
+    },
+    tags: ["dynamodb", "rds", "database-architecture"],
+  },
+  {
+    id: "aws-auto-scaling-groups",
+    topicId: "aws",
+    difficulty: "medium",
+    question: {
+      fr: "Comment fonctionne un Auto Scaling Group, et quel rôle joue le load balancer à côté ?",
+      en: "How does an Auto Scaling Group work, and what role does the load balancer play alongside it ?",
+    },
+    answer: {
+      fr: "Un Auto Scaling Group maintient un nombre d'instances EC2 identiques entre un minimum et un maximum configurés, en se basant sur une métrique surveillée, le plus souvent l'utilisation CPU moyenne, pour ajouter ou retirer des instances au besoin. Le load balancer, en général un Application Load Balancer, distribue le trafic entrant entre toutes les instances saines actuellement gérées par le groupe, et vérifie leur santé via des health checks réguliers, en retirant automatiquement du routage toute instance qui ne répond plus correctement. Ensemble, ils forment le socle standard d'une architecture web résiliente et élastique sur AWS.",
+      en: "An Auto Scaling Group maintains a number of identical EC2 instances between a configured minimum and maximum, based on a monitored metric, most often average CPU usage, to add or remove instances as needed. The load balancer, typically an Application Load Balancer, distributes incoming traffic across every healthy instance currently managed by the group, and checks their health through regular health checks, automatically removing any instance that stops responding correctly from routing. Together, they form the standard foundation of a resilient, elastic web architecture on AWS.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que la nouvelle instance créée par un scale-up démarre à froid, sans cache local ni connexions déjà établies : si le démarrage de l'application est lent, ou si le health check la marque saine avant qu'elle soit vraiment prête à absorber du trafic, ça peut créer des erreurs pour les premières requêtes qui lui sont routées.",
+      en: "The trap is forgetting that a new instance created by a scale-up starts cold, with no local cache or already-established connections: if the application startup is slow, or if the health check marks it healthy before it's truly ready to absorb traffic, it can create errors for the first requests routed to it.",
+    },
+    tags: ["auto-scaling", "load-balancing", "resilience"],
+  },
+  {
+    id: "aws-cloudformation-vs-terraform",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Quand préférer CloudFormation à Terraform pour gérer une infrastructure AWS, et inversement ?",
+      en: "When should you prefer CloudFormation over Terraform to manage AWS infrastructure, and vice versa ?",
+    },
+    answer: {
+      fr: "CloudFormation est le service d'infrastructure as code natif d'AWS : il connaît immédiatement les nouveaux services AWS dès leur sortie, s'intègre nativement avec les autres outils AWS comme les Service Catalogs ou StackSets pour du multi-compte, et ne nécessite pas de gérer un fichier d'état séparé, AWS s'en charge en interne. Terraform, lui, est multi-cloud : la même syntaxe HCL peut gérer AWS, Azure, GCP et de nombreux autres fournisseurs dans un seul projet, avec un langage souvent jugé plus lisible et un écosystème de modules communautaires très riche. Le choix dépend donc surtout de si l'infrastructure reste exclusivement AWS ou si elle doit couvrir plusieurs fournisseurs cloud, ou si l'équipe a déjà une expertise établie sur l'un des deux outils.",
+      en: "CloudFormation is AWS's native infrastructure as code service: it immediately supports new AWS services as they launch, integrates natively with other AWS tools like Service Catalogs or StackSets for multi-account setups, and requires no separate state file to manage, AWS handles that internally. Terraform is multi-cloud: the same HCL syntax can manage AWS, Azure, GCP and many other providers in a single project, with a language often considered more readable and a very rich ecosystem of community modules. The choice mainly depends on whether the infrastructure stays exclusively on AWS or needs to span several cloud providers, or whether the team already has established expertise with one of the two tools.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter l'un comme objectivement supérieur à l'autre : ce sont deux outils matures avec des compromis différents, la bonne réponse dépend du contexte, notamment de la stratégie multi-cloud ou mono-cloud de l'entreprise, plutôt que d'une préférence technique universelle.",
+      en: "The interview trap is presenting one as objectively superior to the other: these are two mature tools with different trade-offs, the right answer depends on context, particularly the company's multi-cloud or single-cloud strategy, rather than a universal technical preference.",
+    },
+    tags: ["cloudformation", "terraform", "iac"],
+  },
+  {
+    id: "aws-least-privilege-security",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Comment structurer des policies IAM AWS pour appliquer concrètement le principe du moindre privilège ?",
+      en: "How do you structure AWS IAM policies to concretely apply the principle of least privilege ?",
+    },
+    answer: {
+      fr: "Une bonne pratique est de partir d'une policy la plus restrictive possible, qui n'autorise que les actions précises nécessaires sur des ressources précises identifiées par leur ARN, plutôt que de partir d'une policy large qu'on essaierait de restreindre après coup. On combine souvent des policies gérées par AWS pour des besoins standards avec des policies personnalisées pour des besoins spécifiques, et on utilise des conditions, comme restreindre l'accès à une plage d'adresses IP ou exiger l'authentification multifacteur pour certaines actions sensibles. AWS IAM Access Analyzer aide à repérer les permissions accordées mais jamais utilisées, ce qui permet de les retirer progressivement sans casser un usage réel.",
+      en: "A good practice is starting from the most restrictive policy possible, allowing only the precise actions needed on precise resources identified by their ARN, rather than starting from a broad policy you'd try to restrict afterward. Managed AWS policies for standard needs are often combined with custom policies for specific needs, and conditions are used, like restricting access to an IP range or requiring multi-factor authentication for certain sensitive actions. AWS IAM Access Analyzer helps spot permissions granted but never used, which lets you progressively remove them without breaking real usage.",
+    },
+    pitfall: {
+      fr: "Le piège classique est d'utiliser une policy avec une action en wildcard, comme s3:*, sur une ressource en wildcard, plutôt que de lister précisément les actions et les ressources nécessaires : c'est rapide à écrire mais ça élargit considérablement l'impact possible d'une identité compromise, exactement ce que le moindre privilège cherche à éviter.",
+      en: "The classic trap is using a policy with a wildcard action, like s3:*, on a wildcard resource, rather than precisely listing the needed actions and resources: it's quick to write but considerably widens the possible impact of a compromised identity, exactly what least privilege is meant to prevent.",
+    },
+    tags: ["iam", "security", "least-privilege"],
+  },
+
+  // Azure
+  {
+    id: "azure-app-service-vs-aks",
+    topicId: "azure",
+    difficulty: "easy",
+    question: {
+      fr: "Quand choisir Azure App Service plutôt qu'AKS (Azure Kubernetes Service) pour héberger une application web ?",
+      en: "When should you choose Azure App Service over AKS (Azure Kubernetes Service) to host a web application ?",
+    },
+    answer: {
+      fr: "App Service est une plateforme managée pensée pour déployer directement une application web ou une API sans gérer l'infrastructure sous-jacente ni orchestrer des conteneurs soi-même : on pousse le code ou une image, App Service s'occupe du reste, y compris le scaling horizontal simple et les certificats. AKS donne un contrôle complet sur un cluster Kubernetes, adapté à une architecture microservices complexe qui a besoin d'orchestration fine, de sidecars, ou de patterns spécifiques à Kubernetes, mais au prix d'une charge opérationnelle bien plus lourde. Pour une application simple ou moyenne sans besoin d'orchestration avancée, App Service évite une complexité inutile.",
+      en: "App Service is a managed platform designed to deploy a web application or API directly without managing the underlying infrastructure or orchestrating containers yourself: you push code or an image, App Service handles the rest, including simple horizontal scaling and certificates. AKS gives full control over a Kubernetes cluster, suited to a complex microservices architecture that needs fine-grained orchestration, sidecars, or Kubernetes-specific patterns, but at the cost of much heavier operational overhead. For a simple or medium application without a need for advanced orchestration, App Service avoids unnecessary complexity.",
+    },
+    pitfall: {
+      fr: "Le piège est de choisir AKS par défaut parce que Kubernetes est devenu un standard de fait, sans que le projet ait réellement besoin de son niveau d'orchestration : ça ajoute une charge opérationnelle et une courbe d'apprentissage significatives pour un bénéfice qui peut rester théorique sur une application simple.",
+      en: "The trap is choosing AKS by default because Kubernetes has become a de facto standard, without the project actually needing its level of orchestration: it adds significant operational overhead and a learning curve for a benefit that can remain theoretical on a simple application.",
+    },
+    tags: ["app-service", "aks", "architecture"],
+  },
+  {
+    id: "azure-resource-groups",
+    topicId: "azure",
+    difficulty: "easy",
+    question: {
+      fr: "À quoi sert un resource group dans Azure ?",
+      en: "What is a resource group for in Azure ?",
+    },
+    answer: {
+      fr: "Un resource group est un conteneur logique qui regroupe les ressources Azure liées à un même projet ou environnement, comme des machines virtuelles, une base de données et un réseau, sans nécessairement partager de contrainte technique entre elles. Il sert principalement d'unité de gestion : appliquer des permissions IAM à toutes les ressources qu'il contient d'un coup, suivre les coûts associés à ce périmètre précis, et surtout supprimer d'un seul coup toutes les ressources d'un environnement de test en supprimant simplement le resource group. C'est une frontière organisationnelle et de gestion du cycle de vie, pas une frontière réseau ou de sécurité en soi.",
+      en: "A resource group is a logical container grouping Azure resources related to the same project or environment, like virtual machines, a database and a network, without necessarily sharing a technical constraint between them. It mainly serves as a management unit: applying IAM permissions to every resource it contains at once, tracking costs tied to that precise scope, and especially deleting every resource of a test environment in one go by simply deleting the resource group. It's an organizational and lifecycle management boundary, not a network or security boundary in itself.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'un resource group isole automatiquement le réseau ou la sécurité de ses ressources par rapport à un autre resource group : deux ressources dans deux resource groups différents peuvent très bien communiquer librement entre elles si le réseau et les règles de pare-feu le permettent, l'isolement réelle vient de la configuration réseau, pas du regroupement organisationnel.",
+      en: "The trap is believing a resource group automatically isolates the network or security of its resources from another resource group: two resources in two different resource groups can perfectly well communicate freely with each other if the network and firewall rules allow it, real isolation comes from network configuration, not from organizational grouping.",
+    },
+    tags: ["resource-groups", "governance", "basics"],
+  },
+  {
+    id: "azure-active-directory-basics",
+    topicId: "azure",
+    difficulty: "medium",
+    question: {
+      fr: "Quel est le rôle de Microsoft Entra ID (anciennement Azure Active Directory) dans une architecture Azure, et qu'est-ce qu'un service principal ?",
+      en: "What is the role of Microsoft Entra ID (formerly Azure Active Directory) in an Azure architecture, and what is a service principal ?",
+    },
+    answer: {
+      fr: "Entra ID est le service d'identité central d'Azure : il gère l'authentification et l'autorisation des utilisateurs, des groupes et des applications à travers l'ensemble des services Azure et de nombreuses applications tierces qui s'y connectent, en s'appuyant sur des protocoles standards comme OAuth 2.0 et OpenID Connect. Un service principal est l'identité qu'utilise une application ou un service, plutôt qu'un humain, pour s'authentifier auprès d'Entra ID et accéder aux ressources Azure avec des permissions précises qui lui sont attribuées, l'équivalent d'un compte de service dans d'autres écosystèmes cloud.",
+      en: "Entra ID is Azure's central identity service: it handles authentication and authorization for users, groups and applications across the whole set of Azure services and many third-party applications connecting to it, relying on standard protocols like OAuth 2.0 and OpenID Connect. A service principal is the identity an application or service, rather than a human, uses to authenticate to Entra ID and access Azure resources with precise permissions assigned to it, the equivalent of a service account in other cloud ecosystems.",
+    },
+    pitfall: {
+      fr: "Le piège est de créer un service principal avec un secret client stocké en dur dans la configuration de l'application, plutôt que d'utiliser une identité managée quand la ressource s'y prête : l'identité managée élimine le besoin de gérer et de faire tourner un secret manuellement, réduisant le risque en cas de fuite de configuration.",
+      en: "The trap is creating a service principal with a client secret hardcoded into the application's configuration, rather than using a managed identity when the resource allows it: a managed identity eliminates the need to manage and rotate a secret manually, reducing the risk in case of a configuration leak.",
+    },
+    tags: ["entra-id", "identity", "security"],
+  },
+  {
+    id: "azure-functions-triggers",
+    topicId: "azure",
+    difficulty: "medium",
+    question: {
+      fr: "Comment fonctionnent les triggers dans Azure Functions ?",
+      en: "How do triggers work in Azure Functions ?",
+    },
+    answer: {
+      fr: "Un trigger définit ce qui déclenche l'exécution d'une fonction et lui fournit automatiquement les données d'entrée associées à cet événement : une requête HTTP, un nouveau message arrivé sur une file Service Bus ou Storage Queue, un fichier ajouté à un compte de stockage, ou encore un timer déclenché à intervalle régulier. Une fonction ne peut avoir qu'un seul trigger, mais peut ensuite utiliser des input bindings et output bindings pour lire ou écrire d'autres ressources Azure, comme une base de données ou un autre message, sans avoir à écrire tout le code d'intégration à la main.",
+      en: "A trigger defines what starts a function's execution and automatically supplies it with the input data tied to that event: an HTTP request, a new message arriving on a Service Bus or Storage Queue, a file added to a storage account, or a timer firing at a regular interval. A function can only have one trigger, but can then use input and output bindings to read or write other Azure resources, like a database or another message, without having to hand-write all the integration code.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que la plupart des triggers, comme celui d'une file d'attente, garantissent une livraison at-least-once et non exactly-once : une fonction peut donc être invoquée plus d'une fois pour le même message en cas de panne ou de retry, ce qui impose de rendre le traitement idempotent plutôt que de supposer qu'il ne s'exécutera jamais deux fois.",
+      en: "The trap is forgetting that most triggers, like a queue trigger, guarantee at-least-once delivery rather than exactly-once: a function can therefore be invoked more than once for the same message in case of failure or retry, which requires making the processing idempotent rather than assuming it will never run twice.",
+    },
+    tags: ["azure-functions", "serverless", "triggers"],
+  },
+  {
+    id: "azure-storage-account-tiers",
+    topicId: "azure",
+    difficulty: "easy",
+    question: {
+      fr: "Quelles sont les principales options de niveau d'accès (access tier) d'un compte de stockage Azure, et sur quel critère choisir ?",
+      en: "What are the main access tier options for an Azure storage account, and what criterion should you use to choose ?",
+    },
+    answer: {
+      fr: "Le niveau Hot convient aux données consultées fréquemment, avec le coût de stockage le plus élevé mais le coût d'accès le plus bas. Le niveau Cool convient à des données accédées occasionnellement, en général au moins une fois par mois, avec un coût de stockage réduit mais un coût par accès plus élevé et une durée de conservation minimale à respecter. Le niveau Archive offre le coût de stockage le plus bas pour des données rarement voire jamais consultées, comme une archive réglementaire, mais nécessite une réhydratation qui peut prendre plusieurs heures avant que la donnée redevienne accessible. Le bon critère de choix reste la fréquence d'accès attendue aux données, pas leur volume ni leur importance perçue.",
+      en: "The Hot tier fits frequently accessed data, with the highest storage cost but the lowest access cost. The Cool tier fits occasionally accessed data, typically at least once a month, with lower storage cost but a higher per-access cost and a minimum retention period to respect. The Archive tier offers the lowest storage cost for rarely or never accessed data, like a regulatory archive, but requires rehydration that can take several hours before the data becomes accessible again. The right criterion remains the expected access frequency, not the volume or perceived importance of the data.",
+    },
+    pitfall: {
+      fr: "Le piège est de placer en Archive des données dont on n'est pas certain de la fréquence de consultation future, uniquement pour économiser sur le stockage : si elles sont finalement consultées plus souvent que prévu, le coût cumulé de réhydratation et d'accès peut largement dépasser ce qu'aurait coûté un niveau Cool ou Hot dès le départ.",
+      en: "The trap is placing data whose future access frequency isn't certain into Archive, purely to save on storage, if it ends up being accessed more often than expected, the cumulative rehydration and access cost can far exceed what a Cool or Hot tier would have cost from the start.",
+    },
+    tags: ["storage-account", "access-tiers", "cost-optimization"],
+  },
+  {
+    id: "azure-vnet-basics",
+    topicId: "azure",
+    difficulty: "medium",
+    question: {
+      fr: "Qu'est-ce qu'un VNet Azure, et comment un Network Security Group (NSG) s'y intègre-t-il ?",
+      en: "What is an Azure VNet, and how does a Network Security Group (NSG) fit into it ?",
+    },
+    answer: {
+      fr: "Un VNet (Virtual Network) est le réseau privé isolé où résident les ressources Azure d'un projet, découpé en sous-réseaux selon les besoins de segmentation. Un NSG est un pare-feu à état qu'on associe à un sous-réseau ou directement à une interface réseau, avec des règles qui autorisent ou refusent le trafic entrant et sortant selon le protocole, le port et la source ou destination. En combinant un découpage en sous-réseaux logiques et des NSG associés à chacun, on peut mettre en place une segmentation réseau fine, par exemple isoler un sous-réseau de base de données pour qu'il n'accepte du trafic que depuis le sous-réseau applicatif.",
+      en: "A VNet (Virtual Network) is the isolated private network where a project's Azure resources live, split into subnets according to segmentation needs. An NSG is a stateful firewall attached to a subnet or directly to a network interface, with rules that allow or deny inbound and outbound traffic based on protocol, port and source or destination. By combining a split into logical subnets with NSGs attached to each, you can set up fine-grained network segmentation, for example isolating a database subnet so it only accepts traffic from the application subnet.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier qu'un NSG peut être associé à la fois à un sous-réseau et à une interface réseau individuelle, et que les deux jeux de règles s'appliquent alors ensemble : un trafic peut être bloqué par l'un même si l'autre l'autorise, ce qui complique le débogage si on ne vérifie pas les deux niveaux d'association.",
+      en: "The trap is forgetting an NSG can be attached to both a subnet and an individual network interface, and that both rule sets then apply together: traffic can be blocked by one even if the other allows it, which complicates debugging if both levels of association aren't checked.",
+    },
+    tags: ["vnet", "networking", "nsg"],
+  },
+  {
+    id: "azure-devops-vs-github-actions",
+    topicId: "azure",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence d'approche entre Azure DevOps Pipelines et GitHub Actions pour la CI/CD ?",
+      en: "What is the difference in approach between Azure DevOps Pipelines and GitHub Actions for CI/CD ?",
+    },
+    answer: {
+      fr: "Azure DevOps Pipelines est une plateforme CI/CD complète historiquement pensée pour des organisations avec des besoins de gouvernance poussés, avec une gestion fine des environnements, des approbations multi-étapes, et une intégration profonde avec l'écosystème Microsoft, tout en pouvant fonctionner avec un code hébergé ailleurs que sur Azure Repos. GitHub Actions est plus récent et directement intégré au dépôt GitHub, avec une syntaxe YAML orientée événements du dépôt, un marketplace très riche d'actions communautaires réutilisables, et une adoption plus naturelle pour une équipe déjà centrée sur GitHub. Le choix dépend souvent de l'écosystème déjà en place plutôt que d'une différence fondamentale de capacité entre les deux.",
+      en: "Azure DevOps Pipelines is a full CI/CD platform historically designed for organizations with advanced governance needs, with fine-grained environment management, multi-stage approvals, and deep integration with the Microsoft ecosystem, while still being able to work with code hosted elsewhere than Azure Repos. GitHub Actions is more recent and directly integrated into the GitHub repository, with a YAML syntax oriented around repository events, a very rich marketplace of reusable community actions, and more natural adoption for a team already centered on GitHub. The choice often depends on the ecosystem already in place rather than a fundamental capability difference between the two.",
+    },
+    pitfall: {
+      fr: "Le piège est de sous-estimer le coût de migration d'un existant conséquent en pipelines Azure DevOps vers GitHub Actions, ou l'inverse, en se basant uniquement sur des préférences de syntaxe : au-delà de la syntaxe, les intégrations spécifiques déjà construites, comme les gates d'approbation ou les connexions à des services externes, représentent souvent le vrai coût de changement.",
+      en: "The trap is underestimating the migration cost of a substantial existing set of Azure DevOps pipelines to GitHub Actions, or the reverse, based only on syntax preferences: beyond syntax, the specific integrations already built, like approval gates or connections to external services, are often the real cost of switching.",
+    },
+    tags: ["ci-cd", "azure-devops", "github-actions"],
+  },
+  {
+    id: "azure-managed-identity",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'apporte une identité managée (managed identity) par rapport à un service principal classique avec un secret client ?",
+      en: "What does a managed identity provide compared to a classic service principal with a client secret ?",
+    },
+    answer: {
+      fr: "Un service principal classique nécessite de générer, stocker et faire tourner régulièrement un secret client, ce qui crée un risque permanent de fuite si ce secret se retrouve dans un dépôt de code, une variable d'environnement mal protégée, ou un log. Une identité managée est automatiquement gérée par Azure pour une ressource spécifique, comme une machine virtuelle ou une App Service : Azure génère et fait tourner les identifiants sous-jacents en interne, sans jamais les exposer au développeur, qui n'a qu'à autoriser cette identité à accéder aux ressources ciblées via IAM. Il existe deux types, l'identité managée assignée par le système, liée au cycle de vie de la ressource, et l'identité managée assignée par l'utilisateur, qui existe indépendamment et peut être partagée entre plusieurs ressources.",
+      en: "A classic service principal requires generating, storing and regularly rotating a client secret, creating a permanent leak risk if that secret ends up in a code repository, a poorly protected environment variable, or a log. A managed identity is automatically managed by Azure for a specific resource, like a virtual machine or an App Service: Azure generates and rotates the underlying credentials internally, never exposing them to the developer, who only needs to authorize that identity to access the targeted resources via IAM. There are two types, system-assigned managed identity, tied to the resource's lifecycle, and user-assigned managed identity, which exists independently and can be shared across multiple resources.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'une identité managée est utilisable partout sans restriction : elle ne fonctionne que pour authentifier une ressource Azure auprès d'un autre service Azure qui supporte Entra ID, elle ne remplace pas un mécanisme d'authentification pour un utilisateur humain ou pour un appel vers un service totalement externe à Azure.",
+      en: "The trap is believing a managed identity is usable everywhere without restriction: it only works to authenticate an Azure resource to another Azure service that supports Entra ID, it doesn't replace an authentication mechanism for a human user or for a call to a service entirely external to Azure.",
+    },
+    tags: ["managed-identity", "security", "azure-ad"],
+  },
+
+  // Docker
+  {
+    id: "docker-image-vs-container",
+    topicId: "docker",
+    difficulty: "easy",
+    question: {
+      fr: "Quelle est la différence entre une image Docker et un conteneur ?",
+      en: "What is the difference between a Docker image and a container ?",
+    },
+    answer: {
+      fr: "Une image Docker est un modèle en lecture seule qui contient le système de fichiers, les dépendances et la configuration nécessaires pour faire tourner une application, construite une fois à partir d'un Dockerfile puis stockée et versionnée. Un conteneur est une instance en cours d'exécution de cette image, avec une couche en écriture ajoutée par-dessus pour tous les changements effectués pendant son fonctionnement. On peut lancer plusieurs conteneurs indépendants à partir de la même image, chacun avec son propre état d'exécution, ses propres processus, et sa propre couche d'écriture, sans que l'image d'origine soit jamais modifiée.",
+      en: "A Docker image is a read-only template containing the filesystem, dependencies and configuration needed to run an application, built once from a Dockerfile and then stored and versioned. A container is a running instance of that image, with a writable layer added on top for any changes made while it's running. You can launch several independent containers from the same image, each with its own runtime state, its own processes, and its own writable layer, without the original image ever being modified.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que les modifications faites dans un conteneur en cours d'exécution, comme installer un paquet manuellement, sont conservées si on relance un nouveau conteneur depuis la même image : elles ne persistent que dans la couche d'écriture de ce conteneur précis, et disparaissent avec lui à moins d'avoir été explicitement intégrées dans une nouvelle image.",
+      en: "The trap is believing changes made inside a running container, like manually installing a package, are kept if you launch a new container from the same image: they only persist in that specific container's writable layer, and disappear with it unless explicitly baked into a new image.",
+    },
+    tags: ["images", "containers", "basics"],
+  },
+  {
+    id: "docker-layers-caching",
+    topicId: "docker",
+    difficulty: "medium",
+    question: {
+      fr: "Comment fonctionne le système de couches (layers) dans une image Docker, et comment ça affecte la vitesse de build ?",
+      en: "How does the layer system work in a Docker image, and how does it affect build speed ?",
+    },
+    answer: {
+      fr: "Chaque instruction d'un Dockerfile, comme COPY ou RUN, produit une nouvelle couche empilée sur les précédentes, et Docker met en cache chaque couche individuellement en se basant sur l'instruction et son contexte. Au build suivant, si une instruction et tout ce qui la précède n'ont pas changé, Docker réutilise directement la couche en cache au lieu de la reconstruire, ce qui accélère fortement les builds répétés. Dès qu'une instruction change, cette couche et toutes celles qui suivent doivent être reconstruites, même si elles n'ont elles-mêmes pas changé, d'où l'intérêt de bien ordonner les instructions du Dockerfile.",
+      en: "Every instruction in a Dockerfile, like COPY or RUN, produces a new layer stacked on top of the previous ones, and Docker caches each layer individually based on the instruction and its context. On the next build, if an instruction and everything before it hasn't changed, Docker directly reuses the cached layer instead of rebuilding it, which strongly speeds up repeated builds. As soon as one instruction changes, that layer and every one after it must be rebuilt, even if they themselves haven't changed, which is why ordering the Dockerfile's instructions carefully matters.",
+    },
+    pitfall: {
+      fr: "Le piège classique est de copier tout le code source avant d'installer les dépendances dans le Dockerfile : comme le code change bien plus souvent que les dépendances, ça invalide systématiquement le cache de l'étape d'installation à chaque build, alors que copier d'abord uniquement le fichier de dépendances, installer, puis copier le reste du code, garde ce cache valide tant que les dépendances n'ont pas changé.",
+      en: "The classic trap is copying the entire source code before installing dependencies in the Dockerfile: since code changes far more often than dependencies, that systematically invalidates the install step's cache on every build, whereas copying only the dependency file first, installing, then copying the rest of the code keeps that cache valid as long as dependencies haven't changed.",
+    },
+    tags: ["layers", "build-cache", "performance"],
+  },
+  {
+    id: "docker-multi-stage-builds",
+    topicId: "docker",
+    difficulty: "medium",
+    question: {
+      fr: "À quoi servent les builds multi-étapes (multi-stage builds) dans Docker ?",
+      en: "What are multi-stage builds in Docker for ?",
+    },
+    answer: {
+      fr: "Un build multi-étapes permet de définir plusieurs étapes FROM successives dans un même Dockerfile, chacune pouvant utiliser une image de base différente : typiquement une première étape avec tous les outils de compilation nécessaires pour construire l'application, comme le JDK complet et Maven, et une étape finale beaucoup plus légère qui ne récupère que l'artefact compilé depuis la première étape, sur une image minimale d'exécution comme un JRE seul. L'image finale ne contient alors que le strict nécessaire pour exécuter l'application, sans les outils de build qui ont servi à la construire, ce qui réduit fortement la taille de l'image et sa surface d'attaque.",
+      en: "A multi-stage build lets you define several successive FROM stages in the same Dockerfile, each able to use a different base image: typically a first stage with all the build tools needed to compile the application, like a full JDK and Maven, and a much lighter final stage that only pulls the compiled artifact from the first stage, on a minimal runtime image like a JRE alone. The final image then contains only what's strictly needed to run the application, without the build tools used to construct it, strongly reducing image size and attack surface.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier de nettoyer les fichiers intermédiaires ou de cache dans la dernière étape d'un build multi-étapes : même si les outils de build de la première étape n'apparaissent plus dans l'image finale, des artefacts temporaires copiés par erreur dans la dernière étape peuvent quand même alourdir inutilement l'image finale.",
+      en: "The trap is forgetting to clean up intermediate or cache files in the final stage of a multi-stage build: even though the first stage's build tools don't appear in the final image, temporary artifacts accidentally copied into the final stage can still needlessly bloat the final image.",
+    },
+    tags: ["multi-stage-builds", "image-optimization"],
+  },
+  {
+    id: "docker-volumes-vs-bind-mounts",
+    topicId: "docker",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre un volume Docker et un bind mount ?",
+      en: "What is the difference between a Docker volume and a bind mount ?",
+    },
+    answer: {
+      fr: "Un bind mount associe directement un chemin du système de fichiers de la machine hôte à un chemin dans le conteneur : le conteneur voit et modifie exactement les fichiers de l'hôte à cet endroit, pratique pour le développement local quand on veut voir ses changements de code reflétés immédiatement dans le conteneur sans reconstruire l'image. Un volume est un espace de stockage entièrement géré par Docker, indépendant de la structure de fichiers de l'hôte, qui persiste au-delà du cycle de vie d'un conteneur donné et peut être partagé entre plusieurs conteneurs de façon contrôlée. Les volumes sont généralement préférés en production, car ils sont portables entre environnements et ne dépendent pas d'un chemin précis sur l'hôte.",
+      en: "A bind mount directly ties a path on the host machine's filesystem to a path in the container: the container sees and modifies exactly the host's files at that location, handy for local development when you want code changes reflected immediately in the container without rebuilding the image. A volume is a storage space entirely managed by Docker, independent of the host's file structure, which persists beyond a given container's lifecycle and can be shared across several containers in a controlled way. Volumes are generally preferred in production, since they're portable across environments and don't depend on a specific host path.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser un bind mount en production de la même façon qu'en développement : ça crée une dépendance forte à la structure de fichiers exacte de la machine hôte, ce qui casse la portabilité du déploiement et peut poser des problèmes de permissions selon l'environnement d'exécution.",
+      en: "The trap is using a bind mount in production the same way as in development: it creates a strong dependency on the exact file structure of the host machine, which breaks deployment portability and can cause permission issues depending on the runtime environment.",
+    },
+    tags: ["volumes", "bind-mounts", "storage"],
+  },
+  {
+    id: "docker-networking-basics",
+    topicId: "docker",
+    difficulty: "medium",
+    question: {
+      fr: "Comment deux conteneurs peuvent-ils communiquer entre eux par défaut avec Docker ?",
+      en: "How can two containers communicate with each other by default with Docker ?",
+    },
+    answer: {
+      fr: "Par défaut, Docker crée un réseau bridge auquel les conteneurs se connectent, et sur un réseau bridge défini par l'utilisateur, plutôt que le réseau bridge par défaut historique, Docker fournit une résolution DNS automatique : chaque conteneur peut joindre un autre conteneur du même réseau simplement en utilisant son nom comme s'il s'agissait d'un nom d'hôte, sans connaître son adresse IP. Cette communication reste interne au réseau Docker : pour qu'un service extérieur à Docker, comme un navigateur sur la machine hôte, puisse joindre un conteneur, il faut explicitement publier un port du conteneur vers un port de l'hôte.",
+      en: "By default, Docker creates a bridge network that containers connect to, and on a user-defined bridge network, rather than the legacy default bridge network, Docker provides automatic DNS resolution: any container can reach another container on the same network simply by using its name as if it were a hostname, without knowing its IP address. This communication stays internal to the Docker network: for a service outside Docker, like a browser on the host machine, to reach a container, a container port must be explicitly published to a host port.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que le réseau bridge par défaut historique, celui créé automatiquement sans réseau nommé explicitement, ne fournit pas cette résolution DNS par nom de conteneur : sur ce réseau par défaut, il faut passer par des liens legacy ou connaître les adresses IP, ce qui explique pourquoi la bonne pratique reste de toujours créer un réseau bridge nommé explicitement, notamment avec Docker Compose qui le fait automatiquement.",
+      en: "The trap is forgetting that the legacy default bridge network, the one created automatically without an explicitly named network, doesn't provide this container-name DNS resolution: on that default network, you need legacy links or to know IP addresses, which is why the good practice remains always creating an explicitly named bridge network, which Docker Compose does automatically.",
+    },
+    tags: ["networking", "bridge-network", "dns"],
+  },
+  {
+    id: "docker-compose-purpose",
+    topicId: "docker",
+    difficulty: "easy",
+    question: {
+      fr: "À quoi sert Docker Compose, et en quoi diffère-t-il de lancer plusieurs conteneurs avec docker run ?",
+      en: "What is Docker Compose for, and how does it differ from launching several containers with docker run ?",
+    },
+    answer: {
+      fr: "Docker Compose permet de décrire dans un seul fichier YAML plusieurs services conteneurisés qui composent une application, avec leurs images, leurs variables d'environnement, leurs volumes, leurs ports et leurs dépendances entre eux, plutôt que d'enchaîner manuellement plusieurs commandes docker run avec de nombreuses options. Une seule commande, docker compose up, suffit alors à démarrer tous les services ensemble, dans le bon ordre de dépendance, sur un réseau commun créé automatiquement où ils peuvent se joindre par leur nom. C'est particulièrement utile pour reproduire facilement un environnement de développement complet, comme une application avec sa base de données et son cache, de façon reproductible pour toute l'équipe.",
+      en: "Docker Compose lets you describe, in a single YAML file, several containerized services that make up an application, with their images, environment variables, volumes, ports and dependencies between them, rather than manually chaining several docker run commands with many options. A single command, docker compose up, is then enough to start every service together, in the right dependency order, on a common network created automatically where they can reach each other by name. It's particularly useful for easily reproducing a complete development environment, like an application with its database and cache, in a way that's reproducible for the whole team.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser Docker Compose tel quel comme solution d'orchestration en production à grande échelle : il reste conçu pour un usage mono-machine, sans les capacités de haute disponibilité, de répartition sur plusieurs nœuds ou d'auto-scaling qu'offre un orchestrateur comme Kubernetes, qui devient nécessaire au-delà d'un certain niveau d'exigence de production.",
+      en: "The trap is using Docker Compose as-is as a large-scale production orchestration solution: it remains designed for single-machine use, without the high availability, multi-node distribution or auto-scaling capabilities an orchestrator like Kubernetes offers, which becomes necessary beyond a certain level of production requirements.",
+    },
+    tags: ["docker-compose", "local-development", "orchestration"],
+  },
+  {
+    id: "docker-image-size-optimization",
+    topicId: "docker",
+    difficulty: "medium",
+    question: {
+      fr: "Quelles sont les principales techniques pour réduire la taille d'une image Docker ?",
+      en: "What are the main techniques for reducing a Docker image's size ?",
+    },
+    answer: {
+      fr: "Partir d'une image de base minimale, comme une variante alpine ou distroless plutôt qu'une image complète avec un système d'exploitation entier, réduit considérablement la taille de départ. Les builds multi-étapes permettent d'exclure les outils de build du résultat final, comme vu précédemment. Regrouper plusieurs instructions RUN liées en une seule limite le nombre de couches créées et évite de laisser des fichiers temporaires dans une couche intermédiaire qui reste comptée dans la taille totale même si elle est supprimée dans une couche suivante. Enfin, un fichier .dockerignore bien configuré évite de copier accidentellement des fichiers inutiles, comme le dossier node_modules local ou l'historique git, dans le contexte de build.",
+      en: "Starting from a minimal base image, like an alpine or distroless variant rather than a full image with an entire operating system, considerably reduces the starting size. Multi-stage builds let you exclude build tools from the final result, as seen earlier. Grouping several related RUN instructions into one limits the number of layers created and avoids leaving temporary files in an intermediate layer that still counts toward the total size even if removed in a later layer. Finally, a well-configured .dockerignore file avoids accidentally copying unnecessary files, like the local node_modules folder or the git history, into the build context.",
+    },
+    pitfall: {
+      fr: "Le piège classique est de supprimer des fichiers temporaires dans une instruction RUN séparée de celle qui les a créés : comme chaque couche est immuable une fois créée, supprimer un fichier dans une couche ultérieure ne réduit pas la taille de l'image, le fichier reste présent dans la couche précédente, il faut créer et nettoyer dans la même instruction RUN pour que ça compte réellement.",
+      en: "The classic trap is deleting temporary files in a RUN instruction separate from the one that created them: since each layer is immutable once created, removing a file in a later layer doesn't reduce the image size, the file still exists in the earlier layer, you need to create and clean up within the same RUN instruction for it to actually count.",
+    },
+    tags: ["image-optimization", "best-practices"],
+  },
+  {
+    id: "docker-container-vs-vm",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "En quoi l'isolation apportée par un conteneur diffère-t-elle fondamentalement de celle d'une machine virtuelle ?",
+      en: "How does the isolation provided by a container fundamentally differ from that of a virtual machine ?",
+    },
+    answer: {
+      fr: "Une machine virtuelle virtualise le matériel et fait tourner un système d'exploitation complet et indépendant, avec son propre noyau, au-dessus d'un hyperviseur, ce qui offre une isolation très forte mais un coût en ressources et en temps de démarrage significatif. Un conteneur, lui, partage le noyau du système d'exploitation hôte et s'isole grâce à des mécanismes du noyau Linux, principalement les namespaces, qui isolent la vue que le conteneur a du système, comme les processus ou le réseau, et les cgroups, qui limitent et comptabilisent les ressources qu'il peut consommer. Cette isolation au niveau du noyau plutôt qu'au niveau matériel rend les conteneurs beaucoup plus légers et rapides à démarrer, mais avec une frontière d'isolation intrinsèquement moins étanche qu'une VM.",
+      en: "A virtual machine virtualizes hardware and runs a full, independent operating system, with its own kernel, on top of a hypervisor, offering very strong isolation but at a significant cost in resources and startup time. A container, instead, shares the host operating system's kernel and isolates itself through Linux kernel mechanisms, mainly namespaces, which isolate the container's view of the system, like processes or networking, and cgroups, which limit and account for the resources it can consume. This kernel-level isolation rather than hardware-level isolation makes containers much lighter and faster to start, but with an isolation boundary that's inherently less airtight than a VM's.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter un conteneur comme aussi sûr qu'une VM pour isoler du code totalement non fiable : parce que le noyau est partagé, une faille d'évasion de conteneur peut potentiellement affecter l'hôte et les autres conteneurs, ce qui explique pourquoi l'exécution de code non fiable préfère souvent une isolation renforcée, comme une VM dédiée ou une sandbox spécialisée type gVisor ou Firecracker.",
+      en: "The interview trap is presenting a container as equally safe as a VM for isolating fully untrusted code: because the kernel is shared, a container escape flaw can potentially affect the host and other containers, which is why running untrusted code often prefers stronger isolation, like a dedicated VM or a specialized sandbox such as gVisor or Firecracker.",
+    },
+    tags: ["isolation", "virtualization", "security"],
+  },
+
+  // Terraform
+  {
+    id: "terraform-state-file-purpose",
+    topicId: "terraform",
+    difficulty: "easy",
+    question: {
+      fr: "À quoi sert le fichier d'état (state) de Terraform ?",
+      en: "What is Terraform's state file for ?",
+    },
+    answer: {
+      fr: "Le fichier d'état conserve la correspondance entre les ressources déclarées dans la configuration Terraform et les ressources réelles déjà créées chez le fournisseur cloud, avec leurs identifiants et leurs attributs actuels. C'est en comparant cet état enregistré avec la configuration désirée que Terraform détermine quelles actions effectuer, créer, modifier ou supprimer, pour faire converger l'infrastructure réelle vers ce qui est décrit dans le code. Sans ce fichier, Terraform n'aurait aucun moyen de savoir quelles ressources existent déjà ni de faire le lien entre une ressource déclarée dans le code et son équivalent réel chez le fournisseur.",
+      en: "The state file keeps the mapping between resources declared in the Terraform configuration and the real resources already created at the cloud provider, along with their identifiers and current attributes. It's by comparing this recorded state with the desired configuration that Terraform determines which actions to take, create, modify or delete, to converge the real infrastructure toward what's described in the code. Without this file, Terraform would have no way of knowing which resources already exist or of linking a resource declared in code to its real counterpart at the provider.",
+    },
+    pitfall: {
+      fr: "Le piège est de modifier une ressource gérée par Terraform directement dans la console du fournisseur cloud, en dehors de Terraform : le fichier d'état ne reflète plus la réalité, ce qu'on appelle une dérive de configuration, et le prochain plan Terraform peut alors proposer de défaire ce changement manuel sans que ce soit l'intention.",
+      en: "The trap is modifying a Terraform-managed resource directly in the cloud provider's console, outside of Terraform: the state file no longer reflects reality, what's called configuration drift, and the next Terraform plan can then propose undoing that manual change without that being the intent.",
+    },
+    tags: ["state", "basics"],
+  },
+  {
+    id: "terraform-plan-vs-apply",
+    topicId: "terraform",
+    difficulty: "easy",
+    question: {
+      fr: "Quelle est la différence entre terraform plan et terraform apply ?",
+      en: "What is the difference between terraform plan and terraform apply ?",
+    },
+    answer: {
+      fr: "terraform plan calcule et affiche les changements que Terraform effectuerait pour faire correspondre l'infrastructure réelle à la configuration, sans réellement rien modifier : c'est une simulation en lecture seule qui montre précisément ce qui serait créé, modifié ou supprimé. terraform apply exécute réellement ces changements, en général après avoir montré le même plan pour confirmation avant de continuer. Séparer les deux étapes permet de relire et de valider les changements prévus avant qu'ils aient un impact réel, en particulier dans un contexte d'équipe où une revue du plan avant application est une bonne pratique courante.",
+      en: "terraform plan computes and displays the changes Terraform would make to bring real infrastructure in line with the configuration, without actually modifying anything: it's a read-only simulation showing precisely what would be created, modified or deleted. terraform apply actually executes those changes, generally after showing that same plan for confirmation before proceeding. Separating the two steps lets you review and validate the planned changes before they have a real impact, especially in a team context where reviewing the plan before applying is a common good practice.",
+    },
+    pitfall: {
+      fr: "Le piège est de lancer terraform apply directement sans avoir lu attentivement le plan affiché juste avant, surtout avec l'option qui saute la confirmation interactive dans un script automatisé : un changement inattendu, comme la suppression et recréation d'une ressource plutôt qu'une simple modification, peut passer inaperçu et causer une interruption de service évitable.",
+      en: "The trap is running terraform apply without carefully reading the plan displayed right before, especially with the flag that skips interactive confirmation in an automated script: an unexpected change, like a resource being destroyed and recreated rather than simply modified, can go unnoticed and cause an avoidable service interruption.",
+    },
+    tags: ["plan", "apply", "workflow"],
+  },
+  {
+    id: "terraform-remote-state-locking",
+    topicId: "terraform",
+    difficulty: "medium",
+    question: {
+      fr: "Pourquoi utiliser un backend d'état distant avec verrouillage plutôt que de garder le fichier d'état en local, en particulier en équipe ?",
+      en: "Why use a remote state backend with locking rather than keeping the state file locally, especially as a team ?",
+    },
+    answer: {
+      fr: "Un fichier d'état local n'est visible que sur la machine d'une seule personne, ce qui empêche le reste de l'équipe de savoir quel est l'état réel de l'infrastructure ou de lancer leurs propres changements en toute sécurité. Un backend distant, comme un bucket de stockage cloud, centralise ce fichier d'état pour que toute l'équipe travaille à partir de la même source de vérité. Le verrouillage, activé sur la plupart des backends distants, empêche deux exécutions concurrentes de Terraform de modifier le même état en même temps, ce qui éviterait sinon une corruption de l'état ou des changements contradictoires appliqués en parallèle.",
+      en: "A local state file is only visible on one person's machine, which prevents the rest of the team from knowing the infrastructure's real state or safely running their own changes. A remote backend, like a cloud storage bucket, centralizes that state file so the whole team works from the same source of truth. Locking, enabled on most remote backends, prevents two concurrent Terraform runs from modifying the same state at the same time, which would otherwise risk state corruption or conflicting changes applied in parallel.",
+    },
+    pitfall: {
+      fr: "Le piège est de committer le fichier d'état local dans le dépôt Git comme solution de partage improvisée : en plus de ne pas résoudre le problème du verrouillage concurrent, le fichier d'état peut contenir des valeurs sensibles en clair, comme des mots de passe générés, ce qui expose ces secrets à quiconque a accès à l'historique du dépôt.",
+      en: "The trap is committing the local state file into the Git repository as an improvised sharing solution: besides not solving the concurrent locking problem, the state file can contain sensitive values in plain text, like generated passwords, exposing those secrets to anyone with access to the repository's history.",
+    },
+    tags: ["remote-state", "locking", "team-workflow"],
+  },
+  {
+    id: "terraform-modules-basics",
+    topicId: "terraform",
+    difficulty: "medium",
+    question: {
+      fr: "À quoi servent les modules Terraform ?",
+      en: "What are Terraform modules for ?",
+    },
+    answer: {
+      fr: "Un module Terraform est un ensemble de fichiers de configuration regroupés pour représenter un composant d'infrastructure réutilisable, avec des variables d'entrée qui paramètrent son comportement et des valeurs de sortie qui exposent des informations utiles au reste de la configuration. Plutôt que de dupliquer la même déclaration de ressources, comme un réseau ou une base de données, dans chaque environnement ou projet, on définit ce composant une seule fois comme module et on l'appelle avec des paramètres différents pour chaque contexte, ce qui centralise la logique et réduit fortement la duplication de code.",
+      en: "A Terraform module is a set of configuration files grouped to represent a reusable infrastructure component, with input variables that parametrize its behavior and output values that expose useful information to the rest of the configuration. Rather than duplicating the same resource declaration, like a network or a database, in every environment or project, you define that component once as a module and call it with different parameters for each context, centralizing the logic and strongly reducing code duplication.",
+    },
+    pitfall: {
+      fr: "Le piège est de créer un module beaucoup trop générique et paramétré à outrance dès le départ, en essayant d'anticiper tous les usages futurs possibles : ça produit un module difficile à comprendre et à maintenir, une meilleure approche est d'extraire un module concret à partir de duplication réelle déjà observée, plutôt que d'anticiper des besoins hypothétiques.",
+      en: "The trap is creating a hugely generic, over-parametrized module from the start, trying to anticipate every possible future use: that produces a module that's hard to understand and maintain, a better approach is extracting a concrete module from real duplication already observed, rather than anticipating hypothetical needs.",
+    },
+    tags: ["modules", "reusability", "best-practices"],
+  },
+  {
+    id: "terraform-idempotency",
+    topicId: "terraform",
+    difficulty: "medium",
+    question: {
+      fr: "Que signifie l'idempotence dans le contexte de Terraform, et pourquoi est-ce une propriété essentielle ?",
+      en: "What does idempotency mean in the context of Terraform, and why is it an essential property ?",
+    },
+    answer: {
+      fr: "L'idempotence signifie qu'exécuter la même configuration Terraform plusieurs fois de suite produit toujours le même résultat final, sans effet de bord supplémentaire si l'infrastructure correspond déjà à ce qui est décrit. Concrètement, si on lance terraform apply une deuxième fois sans avoir changé la configuration ni l'infrastructure entre-temps, Terraform ne devrait rien avoir à faire, puisque l'état réel correspond déjà à l'état désiré. Cette propriété est ce qui rend Terraform fiable pour de l'automatisation répétée, comme relancer le même pipeline de déploiement plusieurs fois sans risque de dupliquer des ressources ou de créer un état incohérent.",
+      en: "Idempotency means running the same Terraform configuration several times in a row always produces the same final result, with no additional side effect if the infrastructure already matches what's described. Concretely, if you run terraform apply a second time without having changed the configuration or the infrastructure in between, Terraform should have nothing to do, since the real state already matches the desired state. This property is what makes Terraform reliable for repeated automation, like re-running the same deployment pipeline several times without risking duplicated resources or an inconsistent state.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que l'idempotence est garantie automatiquement pour toute ressource, y compris celles qui dépendent de valeurs générées de façon non déterministe, comme un identifiant aléatoire recalculé à chaque plan : une configuration mal écrite peut casser l'idempotence en recréant inutilement une ressource à chaque exécution, il faut vérifier que les valeurs utilisées restent stables entre les runs.",
+      en: "The trap is assuming idempotency is automatically guaranteed for every resource, including those depending on non-deterministically generated values, like a random identifier recomputed on every plan: a poorly written configuration can break idempotency by needlessly recreating a resource on every run, the values used need to be checked for staying stable between runs.",
+    },
+    tags: ["idempotency", "automation", "reliability"],
+  },
+  {
+    id: "terraform-drift-detection",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que la dérive de configuration (configuration drift) en Terraform, et comment la détecter et la corriger ?",
+      en: "What is configuration drift in Terraform, and how do you detect and fix it ?",
+    },
+    answer: {
+      fr: "La dérive de configuration survient quand l'infrastructure réelle chez le fournisseur cloud s'écarte de ce que décrit le fichier d'état Terraform, en général parce qu'un changement a été fait en dehors de Terraform, manuellement dans la console ou par un autre outil d'automatisation. On la détecte en exécutant terraform plan, qui compare l'état actuel réel du fournisseur, rafraîchi au début de la commande, avec la configuration désirée, et signale tout écart trouvé. Pour la corriger, deux options existent : relancer terraform apply pour ramener l'infrastructure à ce que décrit la configuration, ou mettre à jour la configuration elle-même pour refléter intentionnellement le changement effectué manuellement, selon que ce changement manuel était voulu ou pas.",
+      en: "Configuration drift happens when the real infrastructure at the cloud provider diverges from what Terraform's state file describes, generally because a change was made outside Terraform, manually in the console or through another automation tool. It's detected by running terraform plan, which compares the provider's actual current state, refreshed at the start of the command, with the desired configuration, and flags any discrepancy found. Fixing it offers two options: re-running terraform apply to bring the infrastructure back to what the configuration describes, or updating the configuration itself to intentionally reflect the manually made change, depending on whether that manual change was wanted or not.",
+    },
+    pitfall: {
+      fr: "Le piège est de lancer terraform apply en réflexe dès qu'une dérive est détectée, sans se demander si le changement manuel constaté était en fait légitime : ça peut annuler une correction d'urgence faite manuellement pour de bonnes raisons, la première question à se poser face à une dérive est toujours de savoir laquelle des deux versions, l'état réel ou la configuration, doit gagner.",
+      en: "The trap is reflexively running terraform apply as soon as drift is detected, without asking whether the observed manual change was actually legitimate: it can undo an emergency fix made manually for good reasons, the first question to ask when facing drift is always which of the two versions, the real state or the configuration, should win.",
+    },
+    tags: ["drift", "state-management", "operations"],
+  },
+  {
+    id: "terraform-provider-basics",
+    topicId: "terraform",
+    difficulty: "easy",
+    question: {
+      fr: "Qu'est-ce qu'un provider Terraform ?",
+      en: "What is a Terraform provider ?",
+    },
+    answer: {
+      fr: "Un provider est un plugin qui traduit les blocs de configuration Terraform, écrits dans un langage déclaratif générique, en appels concrets à l'API d'un fournisseur ou d'un service particulier, comme AWS, Azure, GCP, ou même des services non-cloud comme GitHub ou Datadog. C'est le provider qui sait comment créer, lire, modifier et supprimer chaque type de ressource qu'il expose, et qui gère l'authentification auprès du service ciblé. Un même fichier de configuration Terraform peut déclarer plusieurs providers différents, ce qui permet, par exemple, de gérer à la fois de l'infrastructure AWS et des enregistrements DNS chez un registrar tiers dans le même projet.",
+      en: "A provider is a plugin that translates Terraform configuration blocks, written in a generic declarative language, into concrete API calls to a specific provider or service, like AWS, Azure, GCP, or even non-cloud services like GitHub or Datadog. It's the provider that knows how to create, read, update and delete every type of resource it exposes, and that handles authentication to the targeted service. A single Terraform configuration file can declare several different providers, letting you, for example, manage both AWS infrastructure and DNS records at a third-party registrar in the same project.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier de fixer une version précise ou une plage de versions pour chaque provider utilisé : sans contrainte de version, une mise à jour automatique du provider entre deux exécutions peut introduire un changement de comportement inattendu, alors que verrouiller les versions garantit des exécutions reproductibles dans le temps.",
+      en: "The trap is forgetting to pin a precise version or version range for each provider used: without a version constraint, an automatic provider update between two runs can introduce an unexpected behavior change, while locking versions guarantees reproducible runs over time.",
+    },
+    tags: ["providers", "basics"],
+  },
+  {
+    id: "terraform-state-secrets-risk",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi le fichier d'état Terraform représente-t-il un risque de sécurité, et comment le limiter ?",
+      en: "Why does the Terraform state file represent a security risk, and how do you mitigate it ?",
+    },
+    answer: {
+      fr: "Le fichier d'état stocke les attributs complets de chaque ressource gérée, y compris des valeurs sensibles générées ou passées en entrée, comme un mot de passe de base de données ou une clé d'API, et ce, en clair par défaut, non chiffrées dans le fichier lui-même. N'importe qui ayant accès en lecture au fichier d'état peut donc potentiellement récupérer ces secrets, même s'il n'a pas les permissions pour y accéder directement via le fournisseur cloud. On limite ce risque en stockant l'état sur un backend distant qui chiffre les données au repos, en restreignant strictement les permissions d'accès à ce backend, et en évitant autant que possible de faire transiter des secrets bruts par des variables Terraform quand une alternative existe, comme référencer un secret déjà stocké dans un gestionnaire de secrets dédié.",
+      en: "The state file stores the complete attributes of every managed resource, including sensitive values generated or passed as input, like a database password or an API key, and by default in plain text, unencrypted within the file itself. Anyone with read access to the state file can therefore potentially retrieve those secrets, even without permissions to access them directly through the cloud provider. This risk is mitigated by storing the state on a remote backend that encrypts data at rest, strictly restricting access permissions to that backend, and avoiding as much as possible passing raw secrets through Terraform variables when an alternative exists, like referencing a secret already stored in a dedicated secrets manager.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que marquer une variable comme sensitive = true dans Terraform chiffre ou protège sa valeur : ça ne fait que masquer l'affichage de cette valeur dans les logs de plan et d'apply pour éviter une fuite accidentelle à l'écran, la valeur reste stockée en clair dans le fichier d'état, ce qui ne remplace en rien un vrai contrôle d'accès sur ce fichier.",
+      en: "The trap is believing marking a variable as sensitive = true in Terraform encrypts or protects its value: it only hides that value's display in plan and apply logs to avoid an accidental on-screen leak, the value still gets stored in plain text in the state file, which is no substitute for real access control on that file.",
+    },
+    tags: ["state", "secrets", "security"],
+  },
+
+  // Apache Spark
+  {
+    id: "spark-rdd-vs-dataframe",
+    topicId: "spark",
+    difficulty: "medium",
+    question: {
+      fr: "Quelle est la différence entre un RDD et un DataFrame dans Apache Spark ?",
+      en: "What is the difference between an RDD and a DataFrame in Apache Spark ?",
+    },
+    answer: {
+      fr: "Un RDD (Resilient Distributed Dataset) est l'abstraction de bas niveau de Spark, une collection distribuée d'objets sans structure de schéma connue par Spark, sur laquelle on programme avec des transformations fonctionnelles comme map et filter, avec un contrôle fin mais peu d'optimisations automatiques. Un DataFrame ajoute une structure tabulaire avec des colonnes typées et nommées, comme une table de base de données, ce qui permet à Spark de connaître le schéma des données et d'appliquer un optimiseur de requêtes, Catalyst, qui réorganise et optimise les opérations avant de les exécuter. En pratique, les DataFrames sont largement préférés aujourd'hui pour leurs performances et leur API plus expressive, les RDD restant réservés à des cas qui ont vraiment besoin du contrôle bas niveau.",
+      en: "An RDD (Resilient Distributed Dataset) is Spark's low-level abstraction, a distributed collection of objects with no schema structure known to Spark, programmed against with functional transformations like map and filter, giving fine-grained control but few automatic optimizations. A DataFrame adds tabular structure with typed, named columns, like a database table, letting Spark know the data's schema and apply a query optimizer, Catalyst, which reorganizes and optimizes operations before executing them. In practice, DataFrames are widely preferred today for their performance and more expressive API, RDDs remaining reserved for cases that genuinely need low-level control.",
+    },
+    pitfall: {
+      fr: "Le piège est de mélanger allègrement opérations sur RDD et sur DataFrame dans le même traitement sans en mesurer le coût : convertir entre les deux représentations n'est pas gratuit, et repasser par un RDD au milieu d'un pipeline DataFrame prive Spark de la capacité de l'optimiseur Catalyst à voir et optimiser l'ensemble du traitement de bout en bout.",
+      en: "The trap is freely mixing RDD and DataFrame operations in the same processing without measuring the cost: converting between the two representations isn't free, and dropping back to an RDD in the middle of a DataFrame pipeline deprives the Catalyst optimizer of the ability to see and optimize the whole processing end to end.",
+    },
+    tags: ["rdd", "dataframe", "api-comparison"],
+  },
+  {
+    id: "spark-lazy-evaluation",
+    topicId: "spark",
+    difficulty: "medium",
+    question: {
+      fr: "Que signifie l'évaluation paresseuse (lazy evaluation) dans Spark, et quelle est la différence entre une transformation et une action ?",
+      en: "What does lazy evaluation mean in Spark, and what is the difference between a transformation and an action ?",
+    },
+    answer: {
+      fr: "Une transformation, comme map, filter ou join, décrit une opération à effectuer sur les données mais ne l'exécute pas immédiatement : elle ajoute simplement une étape à un plan d'exécution, un graphe orienté acyclique d'opérations à faire. Une action, comme count, collect ou write, déclenche réellement l'exécution de tout ce plan accumulé jusque-là. Cette évaluation paresseuse permet à Spark d'optimiser l'ensemble du plan avant de l'exécuter, par exemple en combinant plusieurs transformations en une seule passe sur les données ou en réordonnant des opérations pour réduire le volume de données à traiter le plus tôt possible.",
+      en: "A transformation, like map, filter or join, describes an operation to perform on the data but doesn't execute it immediately: it simply adds a step to an execution plan, a directed acyclic graph of operations to perform. An action, like count, collect or write, actually triggers the execution of that entire accumulated plan. This lazy evaluation lets Spark optimize the whole plan before executing it, for example by combining several transformations into a single pass over the data or by reordering operations to reduce the volume of data processed as early as possible.",
+    },
+    pitfall: {
+      fr: "Le piège est d'appeler plusieurs actions successives sur le même DataFrame sans le mettre en cache entre les deux : chaque action redéclenche l'exécution complète du plan depuis le début, y compris une éventuelle lecture coûteuse depuis la source de données, ce qui peut multiplier inutilement le temps de traitement total.",
+      en: "The trap is calling several successive actions on the same DataFrame without caching it in between: each action re-triggers the full plan's execution from the start, including any costly read from the data source, which can needlessly multiply the total processing time.",
+    },
+    tags: ["lazy-evaluation", "transformations", "actions"],
+  },
+  {
+    id: "spark-partitioning-basics",
+    topicId: "spark",
+    difficulty: "medium",
+    question: {
+      fr: "Pourquoi le nombre et la taille des partitions d'un DataFrame Spark ont-ils un impact direct sur les performances ?",
+      en: "Why does the number and size of a Spark DataFrame's partitions have a direct impact on performance ?",
+    },
+    answer: {
+      fr: "Spark répartit les données d'un DataFrame en partitions distribuées sur les différents exécuteurs du cluster, et chaque tâche traite en général une seule partition en parallèle des autres. Trop peu de partitions par rapport au nombre de cœurs disponibles laisse une partie du cluster inactive, faute de travail à répartir en parallèle. Trop de petites partitions crée un surcoût de gestion des tâches qui dépasse le gain de parallélisme, chaque tâche ayant un coût fixe de démarrage indépendant de la quantité de données qu'elle traite. Le bon dimensionnement dépend du volume de données et du nombre de cœurs disponibles, avec l'objectif d'avoir des partitions ni trop nombreuses ni trop grosses, en général de l'ordre de quelques dizaines à quelques centaines de mégaoctets chacune.",
+      en: "Spark distributes a DataFrame's data across partitions spread over the cluster's different executors, and each task generally processes a single partition in parallel with others. Too few partitions relative to the available cores leaves part of the cluster idle, for lack of work to distribute in parallel. Too many small partitions creates task management overhead that exceeds the parallelism gain, since each task has a fixed startup cost independent of how much data it processes. Proper sizing depends on the data volume and the number of available cores, aiming for partitions that are neither too numerous nor too large, typically on the order of a few tens to a few hundred megabytes each.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier le problème des partitions déséquilibrées (skew), où une clé de partitionnement très fréquente concentre l'essentiel des données sur une seule partition : même avec un nombre de partitions globalement bien dimensionné, cette seule partition surchargée devient le goulot d'étranglement qui ralentit tout le traitement, puisque le job entier attend qu'elle termine.",
+      en: "The trap is forgetting the data skew problem, where a very frequent partitioning key concentrates most of the data onto a single partition: even with an overall well-sized partition count, that one overloaded partition becomes the bottleneck slowing down the whole processing, since the entire job waits for it to finish.",
+    },
+    tags: ["partitioning", "performance", "data-skew"],
+  },
+  {
+    id: "spark-shuffle-cost",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi les opérations qui déclenchent un shuffle sont-elles particulièrement coûteuses dans Spark ?",
+      en: "Why are operations that trigger a shuffle particularly expensive in Spark ?",
+    },
+    answer: {
+      fr: "Un shuffle survient quand une opération, comme un groupBy, un join entre deux DataFrames sur une clé, ou un repartition, nécessite de redistribuer les données entre les partitions selon un nouveau critère qui ne correspond pas à leur répartition actuelle. Concrètement, ça implique d'écrire les données intermédiaires sur disque sur chaque exécuteur, de les transférer sur le réseau vers les exécuteurs qui en ont besoin selon la nouvelle clé, puis de les relire, une combinaison d'écriture disque, de trafic réseau et de sérialisation bien plus coûteuse qu'une transformation qui reste au sein d'une même partition sans redistribution.",
+      en: "A shuffle happens when an operation, like a groupBy, a join between two DataFrames on a key, or a repartition, requires redistributing data across partitions according to a new criterion that doesn't match their current layout. Concretely, this involves writing intermediate data to disk on every executor, transferring it over the network to the executors that need it based on the new key, then reading it back, a combination of disk writes, network traffic and serialization that's far more costly than a transformation staying within a single partition with no redistribution.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est de ne citer que le coût réseau du shuffle en oubliant le coût d'écriture disque intermédiaire : c'est justement cette combinaison des deux qui rend un shuffle nettement plus coûteux qu'un simple transfert réseau, et qui justifie des techniques comme le broadcast join pour l'éviter quand une des deux tables jointes est suffisamment petite.",
+      en: "The classic interview trap is citing only the shuffle's network cost while forgetting the intermediate disk write cost: it's precisely that combination of the two that makes a shuffle notably more expensive than a simple network transfer, and that justifies techniques like broadcast joins to avoid it when one of the two joined tables is small enough.",
+    },
+    tags: ["shuffle", "performance", "joins"],
+  },
+  {
+    id: "spark-driver-vs-executor",
+    topicId: "spark",
+    difficulty: "easy",
+    question: {
+      fr: "Quel est le rôle respectif du driver et des executors dans une application Spark ?",
+      en: "What are the respective roles of the driver and the executors in a Spark application ?",
+    },
+    answer: {
+      fr: "Le driver est le processus qui exécute le code principal de l'application, construit le plan d'exécution à partir des transformations et actions déclarées, et coordonne l'ensemble du job en découpant le travail en tâches distribuées aux executors. Les executors sont les processus qui tournent sur les nœuds du cluster, exécutent réellement les tâches qui leur sont assignées sur leur partition de données, et renvoient les résultats ou le statut au driver. Le driver reste un point de coordination central pendant toute la durée de vie de l'application, ce qui en fait aussi un point sensible : s'il tombe, l'application entière s'arrête, contrairement à la perte d'un seul executor qui peut souvent être compensée en relançant les tâches perdues sur un autre executor.",
+      en: "The driver is the process that runs the application's main code, builds the execution plan from the declared transformations and actions, and coordinates the whole job by splitting work into tasks distributed to executors. Executors are the processes running on the cluster's nodes, actually executing the tasks assigned to them on their data partition, and returning results or status to the driver. The driver stays a central coordination point for the application's whole lifetime, which also makes it a sensitive point: if it fails, the entire application stops, unlike losing a single executor, which can often be compensated by rerunning the lost tasks on another executor.",
+    },
+    pitfall: {
+      fr: "Le piège est de rapatrier trop de données vers le driver avec une action comme collect() sur un DataFrame volumineux : le driver n'a généralement pas la même capacité mémoire distribuée que l'ensemble du cluster, ce qui peut le faire tomber en erreur de mémoire alors que le traitement distribué lui-même se serait bien passé.",
+      en: "The trap is pulling too much data back to the driver with an action like collect() on a large DataFrame: the driver generally doesn't have the same distributed memory capacity as the whole cluster, which can crash it with an out-of-memory error even though the distributed processing itself would have gone fine.",
+    },
+    tags: ["driver", "executors", "architecture"],
+  },
+  {
+    id: "spark-caching-persist",
+    topicId: "spark",
+    difficulty: "medium",
+    question: {
+      fr: "Quand et pourquoi utiliser cache() ou persist() sur un DataFrame Spark ?",
+      en: "When and why should you use cache() or persist() on a Spark DataFrame ?",
+    },
+    answer: {
+      fr: "À cause de l'évaluation paresseuse, un DataFrame recalcule tout son plan d'exécution depuis le début à chaque action déclenchée sur lui, y compris une lecture coûteuse depuis la source de données. Marquer un DataFrame avec cache() ou persist() indique à Spark de conserver son résultat en mémoire, ou sur un support choisi avec persist(), après le premier calcul, pour que les actions suivantes réutilisent ce résultat déjà calculé plutôt que de tout refaire. C'est particulièrement utile quand un même DataFrame intermédiaire, coûteux à produire, est réutilisé plusieurs fois dans la suite du traitement, par exemple pour plusieurs agrégations différentes sur le même jeu de données filtré.",
+      en: "Because of lazy evaluation, a DataFrame recomputes its entire execution plan from scratch on every action triggered on it, including a costly read from the data source. Marking a DataFrame with cache() or persist() tells Spark to keep its result in memory, or on a storage medium chosen with persist(), after the first computation, so subsequent actions reuse that already-computed result instead of redoing everything. This is particularly useful when the same costly-to-produce intermediate DataFrame is reused several times later in the processing, for example for several different aggregations on the same filtered dataset.",
+    },
+    pitfall: {
+      fr: "Le piège est de mettre en cache systématiquement tout DataFrame intermédiaire par réflexe : la mise en cache consomme de la mémoire du cluster, potentiellement au détriment d'autres traitements, et n'apporte aucun bénéfice si le DataFrame en question n'est en réalité utilisé qu'une seule fois derrière, auquel cas on paie le coût de la mise en cache sans jamais en profiter.",
+      en: "The trap is reflexively caching every intermediate DataFrame: caching consumes cluster memory, potentially at the expense of other processing, and brings no benefit if that DataFrame is actually only used once afterward, in which case you pay the caching cost without ever benefiting from it.",
+    },
+    tags: ["caching", "persist", "performance"],
+  },
+  {
+    id: "spark-broadcast-variables",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Comment un broadcast join permet-il d'éviter un shuffle coûteux, et quelle en est la limite ?",
+      en: "How does a broadcast join let you avoid an expensive shuffle, and what is its limit ?",
+    },
+    answer: {
+      fr: "Dans une jointure classique entre deux grandes tables, Spark doit redistribuer les données des deux côtés par shuffle pour que les lignes avec la même clé de jointure se retrouvent sur le même executor. Si l'une des deux tables est suffisamment petite pour tenir en mémoire, Spark peut à la place en envoyer une copie complète, diffusée, à chaque executor : chaque executor joint alors sa partition de la grande table avec la copie locale de la petite table, sans qu'aucun shuffle ne soit nécessaire sur la grande table. Ça transforme une opération coûteuse en réseau et en disque en une opération qui reste largement locale à chaque executor, avec un gain de performance souvent très important.",
+      en: "In a classic join between two large tables, Spark needs to shuffle data on both sides so that rows with the same join key end up on the same executor. If one of the two tables is small enough to fit in memory, Spark can instead send a complete, broadcast copy of it to every executor: each executor then joins its partition of the large table with the local copy of the small table, with no shuffle needed on the large table at all. This turns a costly network and disk operation into one that stays largely local to each executor, often with a very significant performance gain.",
+    },
+    pitfall: {
+      fr: "Le piège est de forcer un broadcast join sur une table qui n'est en réalité pas assez petite pour tenir confortablement en mémoire sur chaque executor : plutôt que d'accélérer la jointure, ça peut provoquer des erreurs de mémoire sur les executors ou ralentir fortement la diffusion initiale, la limite de taille raisonnable pour un broadcast reste de l'ordre de quelques centaines de mégaoctets, pas des gigaoctets.",
+      en: "The trap is forcing a broadcast join on a table that isn't actually small enough to comfortably fit in memory on every executor: rather than speeding up the join, it can cause out-of-memory errors on executors or badly slow down the initial broadcast, the reasonable size limit for a broadcast remains on the order of a few hundred megabytes, not gigabytes.",
+    },
+    tags: ["broadcast-join", "shuffle-avoidance", "performance"],
+  },
+  {
+    id: "spark-streaming-vs-batch",
+    topicId: "spark",
+    difficulty: "medium",
+    question: {
+      fr: "Comment Spark Structured Streaming traite-t-il un flux de données en continu, et en quoi diffère-t-il d'un traitement batch classique ?",
+      en: "How does Spark Structured Streaming process a continuous data stream, and how does it differ from classic batch processing ?",
+    },
+    answer: {
+      fr: "Un traitement batch classique lit un jeu de données fini et connu à l'avance, exécute le traitement complet, puis se termine. Spark Structured Streaming traite un flux de données arrivant en continu, comme depuis Kafka, en le découpant conceptuellement en micro-batches traités les uns après les autres à intervalles réguliers ou dès que de nouvelles données arrivent, tout en réutilisant exactement la même API DataFrame que pour du batch. Le moteur gère automatiquement des aspects propres au streaming, comme le suivi de la progression dans la source pour reprendre au bon endroit après un redémarrage, et le traitement des données tardives par rapport à leur horodatage d'origine.",
+      en: "Classic batch processing reads a finite, known-in-advance dataset, runs the full processing, then finishes. Spark Structured Streaming processes a continuously arriving data stream, like one from Kafka, conceptually splitting it into micro-batches processed one after another at regular intervals or as soon as new data arrives, while reusing exactly the same DataFrame API as batch processing. The engine automatically handles streaming-specific concerns, like tracking progress in the source to resume at the right point after a restart, and handling data arriving late relative to its original timestamp.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que Structured Streaming garantit un traitement en temps réel strict, à la milliseconde : c'est un modèle en micro-batches, avec une latence typique de quelques centaines de millisecondes à quelques secondes selon la configuration, ce qui suffit pour la grande majorité des cas d'usage mais ne convient pas à un besoin de latence véritablement sub-milliseconde, où un moteur de streaming natif comme Flink serait plus adapté.",
+      en: "The trap is believing Structured Streaming guarantees strict, millisecond-level real-time processing: it's a micro-batch model, with typical latency from a few hundred milliseconds to a few seconds depending on configuration, which is enough for the vast majority of use cases but doesn't fit a genuinely sub-millisecond latency need, where a native streaming engine like Flink would be better suited.",
+    },
+    tags: ["structured-streaming", "batch-processing", "real-time"],
   },
 ];

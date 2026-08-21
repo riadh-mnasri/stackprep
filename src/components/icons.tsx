@@ -93,6 +93,81 @@ function GcpIcon(props: IconProps) {
   );
 }
 
+function KafkaIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="6" cy="6" r="2" />
+      <circle cx="6" cy="18" r="2" />
+      <circle cx="18" cy="12" r="2" />
+      <path d="M8 7l8 4M8 17l8-4" />
+    </svg>
+  );
+}
+
+function KotlinIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 4h16L12 12l8 8H4V4Z" />
+    </svg>
+  );
+}
+
+function CopilotIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 6 4 12l5 6M15 6l5 6-5 6" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function AwsIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" />
+      <path d="M4 8.5 12 13l8-4.5M12 13v7" />
+    </svg>
+  );
+}
+
+function AzureIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 4h4l6 15h-5l-3-8-4 8H3l6-15Z" />
+    </svg>
+  );
+}
+
+function DockerIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="10" width="4" height="4" />
+      <rect x="9" y="10" width="4" height="4" />
+      <rect x="14" y="10" width="4" height="4" />
+      <rect x="9" y="5" width="4" height="4" />
+      <path d="M3 14c0 4 3.5 6 8 6 5.5 0 9-3 10-6" />
+    </svg>
+  );
+}
+
+function TerraformIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 6 11 9.5v6L5 12V6Z" />
+      <path d="M12 9.5 18 6v6l-6 3.5v-6Z" />
+      <path d="M12 17 18 13.5v6l-6 3.5v-6Z" />
+    </svg>
+  );
+}
+
+function ApacheSparkIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3c-3 4-5 7-5 10a5 5 0 0 0 10 0c0-1.5-.8-2.8-1.8-3.8.3 1.3-.2 2.3-1 2.8.4-2-.5-4-2.2-5.5.3 1.2 0 2-1 2.5.5-2.3-.3-4.3-1-6Z" />
+    </svg>
+  );
+}
+
 const topicIcons: Record<TopicId, (props: IconProps) => React.JSX.Element> = {
   "java-core": JavaIcon,
   "spring-boot": SpringIcon,
@@ -100,6 +175,14 @@ const topicIcons: Record<TopicId, (props: IconProps) => React.JSX.Element> = {
   sql: SqlIcon,
   angular: AngularIcon,
   claude: ClaudeIcon,
+  kafka: KafkaIcon,
+  kotlin: KotlinIcon,
+  copilot: CopilotIcon,
+  aws: AwsIcon,
+  azure: AzureIcon,
+  docker: DockerIcon,
+  terraform: TerraformIcon,
+  spark: ApacheSparkIcon,
   kubernetes: KubernetesIcon,
   gcp: GcpIcon,
 };
