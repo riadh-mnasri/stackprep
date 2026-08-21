@@ -81,15 +81,18 @@ export function QuestionRunner({
           {question.question[locale]}
         </p>
 
-        {!revealed ? (
-          <button
-            onClick={() => setRevealed(true)}
-            className="mt-7 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium transition-all duration-150 hover:-translate-y-0.5 hover:bg-surface-raised hover:shadow-md"
+        <div className={`mt-7 ${!revealed ? "grid" : ""}`}>
+          {!revealed && (
+            <button
+              onClick={() => setRevealed(true)}
+              className="z-10 col-start-1 row-start-1 mt-1 w-fit items-center gap-2 justify-self-center self-start rounded-full border border-border bg-surface-raised px-4 py-2 text-sm font-medium shadow-lg backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              {t("reveal")}
+            </button>
+          )}
+          <div
+            className={`space-y-5 ${!revealed ? "col-start-1 row-start-1 select-none blur-md pointer-events-none" : ""}`}
           >
-            {t("reveal")}
-          </button>
-        ) : (
-          <div className="mt-7 space-y-5">
             <div>
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
                 {t("answerLabel")}
@@ -106,29 +109,31 @@ export function QuestionRunner({
                 {question.pitfall[locale]}
               </p>
             </div>
+          </div>
+        </div>
 
-            <div>
-              <p className="mb-2.5 text-sm text-muted">{t("rateHeading")}</p>
-              <div className="grid grid-cols-3 gap-2">
-                <RateButton
-                  onClick={() => handleRate("unknown")}
-                  icon={<CrossIcon className="h-4 w-4" />}
-                  label={t("rateUnknown")}
-                  tone="danger"
-                />
-                <RateButton
-                  onClick={() => handleRate("partial")}
-                  icon={<HalfIcon className="h-4 w-4" />}
-                  label={t("ratePartial")}
-                  tone="warning"
-                />
-                <RateButton
-                  onClick={() => handleRate("known")}
-                  icon={<CheckIcon className="h-4 w-4" />}
-                  label={t("rateKnown")}
-                  tone="success"
-                />
-              </div>
+        {revealed && (
+          <div className="mt-5">
+            <p className="mb-2.5 text-sm text-muted">{t("rateHeading")}</p>
+            <div className="grid grid-cols-3 gap-2">
+              <RateButton
+                onClick={() => handleRate("unknown")}
+                icon={<CrossIcon className="h-4 w-4" />}
+                label={t("rateUnknown")}
+                tone="danger"
+              />
+              <RateButton
+                onClick={() => handleRate("partial")}
+                icon={<HalfIcon className="h-4 w-4" />}
+                label={t("ratePartial")}
+                tone="warning"
+              />
+              <RateButton
+                onClick={() => handleRate("known")}
+                icon={<CheckIcon className="h-4 w-4" />}
+                label={t("rateKnown")}
+                tone="success"
+              />
             </div>
           </div>
         )}
