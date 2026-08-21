@@ -64,7 +64,10 @@ export function QuestionRunner({
         />
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+      <div
+        className="panel rounded-2xl border border-border bg-surface p-6 sm:p-8"
+        style={{ borderLeft: `3px solid ${topic.accent}` }}
+      >
         <div className="mb-5 flex items-center gap-2">
           <span
             className={`h-1.5 w-1.5 rounded-full ${difficultyDot[question.difficulty]}`}
@@ -81,7 +84,7 @@ export function QuestionRunner({
         {!revealed ? (
           <button
             onClick={() => setRevealed(true)}
-            className="mt-7 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-surface-raised"
+            className="mt-7 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium transition-all duration-150 hover:-translate-y-0.5 hover:bg-surface-raised hover:shadow-md"
           >
             {t("reveal")}
           </button>
@@ -154,7 +157,7 @@ function RateButton({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-xs font-medium transition-colors ${toneClass}`}
+      className={`flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-xs font-medium transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${toneClass}`}
     >
       {icon}
       {label}

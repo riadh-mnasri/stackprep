@@ -18,7 +18,7 @@ export function StatsSummary() {
 
   return (
     <section className="mx-auto max-w-5xl px-5 pb-4">
-      <div className="rounded-2xl border border-border bg-surface p-6">
+      <div className="panel rounded-2xl border border-border bg-surface p-6">
         <div className="mb-5 flex items-center gap-2 text-sm font-medium text-muted">
           <GaugeIcon className="h-4 w-4" />
           {t("statsHeading")}

@@ -36,7 +36,7 @@ export function DashboardView() {
         {hasProgress && (
           <button
             onClick={handleReset}
-            className="shrink-0 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted transition-colors hover:border-danger hover:text-danger"
+            className="shrink-0 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted transition-all duration-150 hover:-translate-y-0.5 hover:border-danger hover:text-danger hover:shadow-md"
           >
             {t("resetButton")}
           </button>
@@ -51,7 +51,7 @@ export function DashboardView() {
         </div>
       ) : (
         <>
-          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
+          <div className="panel mt-8 rounded-2xl border border-border bg-surface p-6">
             <div className="flex items-center gap-2 text-sm font-medium text-muted">
               <GaugeIcon className="h-4 w-4" />
               {t("overallMastery")}
@@ -71,7 +71,7 @@ export function DashboardView() {
                 return (
                   <div
                     key={stat.topicId}
-                    className="rounded-xl border border-border bg-surface p-4"
+                    className="panel rounded-xl border border-border bg-surface p-4"
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <span className="flex items-center gap-2 text-sm font-medium">
@@ -117,7 +117,7 @@ export function DashboardView() {
                   return (
                     <div
                       key={question.id}
-                      className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4"
+                      className="panel flex items-start gap-3 rounded-xl border border-border bg-surface p-4"
                     >
                       <span
                         className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
@@ -145,7 +145,7 @@ export function DashboardView() {
             {recentTests.length === 0 ? (
               <p className="text-sm text-muted">{t("testsEmpty")}</p>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-border">
+              <div className="panel overflow-hidden rounded-xl border border-border">
                 {recentTests.map((test) => (
                   <div
                     key={test.date}

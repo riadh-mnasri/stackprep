@@ -90,17 +90,17 @@ export function GradedTest() {
         {allQuestions.length === 0 ? (
           <p className="mt-8 text-sm text-muted">{t("noQuestions")}</p>
         ) : (
-          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
+          <div className="panel mt-8 rounded-2xl border border-border bg-surface p-6">
             <p className="mb-3 text-sm font-medium">{t("lengthLabel")}</p>
             <div className="flex gap-2">
               {availableLengths.map((n) => (
                 <button
                   key={n}
                   onClick={() => setLength(n)}
-                  className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-all duration-150 ${
                     length === n
-                      ? "border-accent bg-accent text-accent-foreground"
-                      : "border-border hover:bg-surface-raised"
+                      ? "border-accent bg-accent text-accent-foreground shadow-md"
+                      : "border-border hover:-translate-y-0.5 hover:bg-surface-raised hover:shadow-md"
                   }`}
                 >
                   {n}
@@ -109,7 +109,7 @@ export function GradedTest() {
             </div>
             <button
               onClick={startTest}
-              className="mt-6 w-full rounded-full bg-accent py-2.5 text-sm font-medium text-accent-foreground"
+              className="mt-6 w-full rounded-full bg-accent py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.01] active:scale-[0.99]"
             >
               {t("start")}
             </button>
@@ -141,7 +141,7 @@ export function GradedTest() {
 
   return (
     <div className="mx-auto max-w-xl px-5 py-16">
-      <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+      <div className="panel rounded-2xl border border-border bg-surface p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent">
           <GaugeIcon className="h-6 w-6" />
         </div>

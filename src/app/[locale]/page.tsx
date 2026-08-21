@@ -23,8 +23,9 @@ export default async function HomePage({
 
   return (
     <div>
-      <section className="bg-noise">
-        <div className="mx-auto max-w-5xl px-5 pb-14 pt-16 sm:pt-24">
+      <section className="relative overflow-hidden bg-noise">
+        <div className="hero-glow pointer-events-none absolute inset-0" />
+        <div className="relative mx-auto max-w-5xl px-5 pb-14 pt-16 sm:pt-24">
           <p className="mb-4 text-sm font-medium tracking-wide text-accent">
             {t("kicker")}
           </p>
@@ -35,14 +36,14 @@ export default async function HomePage({
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/practice"
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground shadow-md transition-all hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
             >
               {t("ctaPractice")}
               <ArrowRightIcon className="h-4 w-4" />
             </Link>
             <Link
               href="/test"
-              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               {t("ctaTest")}
             </Link>
@@ -63,16 +64,16 @@ export default async function HomePage({
               <Link
                 key={topic.id}
                 href={`/practice/${topic.id}`}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-transparent"
+                className="panel-interactive group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 hover:border-transparent"
                 style={{ ["--topic-accent" as string]: topic.accent }}
               >
                 <div
-                  className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                   style={{ backgroundColor: topic.accentSoft }}
                 />
                 <div className="relative">
                   <div
-                    className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                    className="icon-tile mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                     style={{
                       backgroundColor: topic.accentSoft,
                       color: topic.accent,
@@ -109,7 +110,7 @@ export default async function HomePage({
           {steps.map((step, i) => (
             <div
               key={step.title}
-              className="rounded-2xl border border-border bg-surface p-5"
+              className="panel rounded-2xl border border-border bg-surface p-5"
             >
               <span className="text-xs font-medium text-accent">
                 {String(i + 1).padStart(2, "0")}

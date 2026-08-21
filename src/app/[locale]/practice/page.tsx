@@ -31,15 +31,16 @@ export default async function PracticePage({
             <Link
               key={topic.id}
               href={`/practice/${topic.id}`}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-transparent"
+              className="panel-interactive group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 hover:border-transparent"
+              style={{ ["--topic-accent" as string]: topic.accent }}
             >
               <div
-                className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 style={{ backgroundColor: topic.accentSoft }}
               />
               <div className="relative">
                 <div
-                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                  className="icon-tile mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     backgroundColor: topic.accentSoft,
                     color: topic.accent,

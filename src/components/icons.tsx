@@ -40,9 +40,10 @@ function SpringIcon(props: IconProps) {
 function JpaIcon(props: IconProps) {
   return (
     <svg {...base(props)}>
-      <ellipse cx="12" cy="5.5" rx="7" ry="2.5" />
-      <path d="M5 5.5V12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5.5" />
-      <path d="M5 12v6.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V12" />
+      <rect x="3" y="3.5" width="8" height="8" rx="1.8" />
+      <ellipse cx="17.5" cy="16.5" rx="4" ry="1.7" />
+      <path d="M13.5 16.5v3.3c0 .94 1.79 1.7 4 1.7s4-.76 4-1.7v-3.3" />
+      <path d="M10 11.2 15 14.6" />
     </svg>
   );
 }
