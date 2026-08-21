@@ -67,12 +67,41 @@ function AngularIcon(props: IconProps) {
   );
 }
 
+function ClaudeIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.5 5.5l4.2 4.2M14.3 14.3l4.2 4.2M18.5 5.5l-4.2 4.2M9.7 14.3l-4.2 4.2" />
+    </svg>
+  );
+}
+
+function KubernetesIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 2.8 20.5 8v8L12 21.2 3.5 16V8Z" />
+      <circle cx="12" cy="12" r="2.3" />
+      <path d="M12 4.5v5M12 14.5v5M5.5 8.3l4.5 2.8M18.5 8.3l-4.5 2.8M6.5 17l4-4.5M17.5 17l-4-4.5" />
+    </svg>
+  );
+}
+
+function GcpIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8 17h9a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 9.5 4 4 0 0 0 8 17Z" />
+    </svg>
+  );
+}
+
 const topicIcons: Record<TopicId, (props: IconProps) => React.JSX.Element> = {
   "java-core": JavaIcon,
   "spring-boot": SpringIcon,
   "jpa-hibernate": JpaIcon,
   sql: SqlIcon,
   angular: AngularIcon,
+  claude: ClaudeIcon,
+  kubernetes: KubernetesIcon,
+  gcp: GcpIcon,
 };
 
 export function TopicIcon({

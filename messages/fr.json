@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "StackPrep : préparation entretien Java, Spring, Angular",
-    "description": "Entraîne-toi aux entretiens techniques Java, Spring Boot et Angular avec des questions réelles, des corrections détaillées et un suivi de progression.",
-    "keywords": "entretien technique java, préparation entretien spring boot, questions entretien angular, entretien développeur backend, prépa entretien développeur, JPA hibernate entretien, questions sql entretien"
+    "title": "StackPrep : préparation entretien Java, Spring, Angular, Claude, K8s, GCP",
+    "description": "Entraîne-toi aux entretiens techniques Java, Spring Boot, Angular, Claude/LLM, Kubernetes et GCP avec des questions réelles, des corrections détaillées et un suivi de progression.",
+    "keywords": "entretien technique java, préparation entretien spring boot, questions entretien angular, entretien développeur backend, prépa entretien développeur, JPA hibernate entretien, questions sql entretien, questions entretien kubernetes, entretien technique GCP, questions entretien LLM Claude"
   },
   "nav": {
     "home": "Accueil",
@@ -87,7 +87,7 @@
     "emptyBody": "Commence une session d'entraînement pour voir ta progression apparaître ici."
   },
   "footer": {
-    "tagline": "Entraînement aux entretiens techniques Java, Spring et Angular.",
+    "tagline": "Entraînement aux entretiens techniques Java, Spring, Angular, Claude, Kubernetes et GCP.",
     "localOnly": "Ta progression reste sur ton appareil, aucune donnée n'est envoyée à un serveur.",
     "copyright": "© {year} Riadh MNASRI"
   }

@@ -1,8 +1,8 @@
 {
   "meta": {
-    "title": "StackPrep: Java, Spring, Angular interview prep",
-    "description": "Train for Java, Spring Boot and Angular technical interviews with real questions, detailed corrections and progress tracking.",
-    "keywords": "java interview questions, spring boot interview prep, angular interview questions, backend developer interview, technical interview practice, jpa hibernate interview, sql interview questions"
+    "title": "StackPrep: Java, Spring, Angular, Claude, K8s, GCP interview prep",
+    "description": "Train for Java, Spring Boot, Angular, Claude/LLM, Kubernetes and GCP technical interviews with real questions, detailed corrections and progress tracking.",
+    "keywords": "java interview questions, spring boot interview prep, angular interview questions, backend developer interview, technical interview practice, jpa hibernate interview, sql interview questions, kubernetes interview questions, gcp technical interview, claude llm interview questions"
   },
   "nav": {
     "home": "Home",
@@ -87,7 +87,7 @@
     "emptyBody": "Start a practice session to see your progress appear here."
   },
   "footer": {
-    "tagline": "Interview training for Java, Spring and Angular.",
+    "tagline": "Interview training for Java, Spring, Angular, Claude, Kubernetes and GCP.",
     "localOnly": "Your progress stays on your device, nothing is sent to a server.",
     "copyright": "© {year} Riadh MNASRI"
   }

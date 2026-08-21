@@ -7,7 +7,16 @@ export const alt = "StackPrep";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const topicColors = ["#f0a25c", "#6fcf7a", "#5fb8cf", "#7f9fd6", "#ef6b6b"];
+const topicColors = [
+  "#f0a25c",
+  "#6fcf7a",
+  "#5fb8cf",
+  "#7f9fd6",
+  "#ef6b6b",
+  "#d08a68",
+  "#4fa8e0",
+  "#e0b84f",
+];
 
 export default async function Image({
   params,
