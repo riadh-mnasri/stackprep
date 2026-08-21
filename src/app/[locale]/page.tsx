@@ -1,0 +1,125 @@
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import { topics } from "@/content/topics";
+import { questions } from "@/content/questions";
+import { TopicIcon, ArrowRightIcon } from "@/components/icons";
+import { StatsSummary } from "@/components/stats-summary";
+
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const l = locale as "fr" | "en";
+  const t = await getTranslations("home");
+  const tp = await getTranslations("topic");
+
+  const steps = [
+    { title: t("step1Title"), body: t("step1Body") },
+    { title: t("step2Title"), body: t("step2Body") },
+    { title: t("step3Title"), body: t("step3Body") },
+  ];
+
+  return (
+    <div>
+      <section className="bg-noise">
+        <div className="mx-auto max-w-5xl px-5 pb-14 pt-16 sm:pt-24">
+          <p className="mb-4 text-sm font-medium tracking-wide text-accent">
+            {t("kicker")}
+          </p>
+          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            {t("title")}
+          </h1>
+          <p className="mt-5 max-w-xl text-lg text-muted">{t("subtitle")}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/practice"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {t("ctaPractice")}
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/test"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
+            >
+              {t("ctaTest")}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <StatsSummary />
+
+      <section className="mx-auto max-w-5xl px-5 py-10">
+        <h2 className="mb-5 text-lg font-semibold">{t("topicsHeading")}</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {topics.map((topic) => {
+            const count = questions.filter(
+              (q) => q.topicId === topic.id,
+            ).length;
+            return (
+              <Link
+                key={topic.id}
+                href={`/practice/${topic.id}`}
+                className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-transparent"
+                style={{ ["--topic-accent" as string]: topic.accent }}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  style={{ backgroundColor: topic.accentSoft }}
+                />
+                <div className="relative">
+                  <div
+                    className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                    style={{
+                      backgroundColor: topic.accentSoft,
+                      color: topic.accent,
+                    }}
+                  >
+                    <TopicIcon topicId={topic.id} className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-medium">{topic.name[l]}</h3>
+                  <p className="mt-1 text-sm text-muted">{topic.tagline[l]}</p>
+                  <div className="mt-4 flex items-center justify-between text-xs">
+                    <span className="text-muted">
+                      {t("questionsCount", { count })}
+                    </span>
+                    <span
+                      className="flex items-center gap-1 font-medium opacity-0 transition-opacity group-hover:opacity-100"
+                      style={{ color: topic.accent }}
+                    >
+                      {tp("practiceLink")}
+                      <ArrowRightIcon className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-5 pb-20">
+        <h2 className="mb-5 text-lg font-semibold">
+          {t("howItWorksHeading")}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {steps.map((step, i) => (
+            <div
+              key={step.title}
+              className="rounded-2xl border border-border bg-surface p-5"
+            >
+              <span className="text-xs font-medium text-accent">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-2 font-medium">{step.title}</h3>
+              <p className="mt-1.5 text-sm text-muted">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

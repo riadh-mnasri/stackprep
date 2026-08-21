@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "title": "StackPrep — Préparation entretien Java, Spring, Angular",
+    "description": "Entraîne-toi aux entretiens techniques Java, Spring Boot et Angular avec des questions réelles, des corrections détaillées et un suivi de progression."
+  },
+  "nav": {
+    "home": "Accueil",
+    "practice": "Entraînement",
+    "test": "Test noté",
+    "dashboard": "Tableau de bord"
+  },
+  "home": {
+    "kicker": "Prépa entretien technique",
+    "title": "Prépare tes entretiens Java, Spring et Angular",
+    "subtitle": "Des questions posées en vrai entretien, une correction qui pointe les pièges classiques, et un suivi de tes points faibles par thème.",
+    "ctaPractice": "Commencer l'entraînement",
+    "ctaTest": "Passer le test noté",
+    "topicsHeading": "Les thèmes couverts",
+    "statsHeading": "Ta progression",
+    "questionsCount": "{count} questions",
+    "howItWorksHeading": "Comment ça marche",
+    "step1Title": "Tu réponds mentalement",
+    "step1Body": "Chaque question est posée comme un vrai recruteur la poserait, sans indice.",
+    "step2Title": "Tu révèles la correction",
+    "step2Body": "Réponse complète, plus le piège que la plupart des candidats se prennent sur cette question précise.",
+    "step3Title": "Tu t'auto-évalues",
+    "step3Body": "Je savais, partiellement, ou pas du tout : ça alimente ton tableau de bord de progression."
+  },
+  "topic": {
+    "practiceLink": "S'entraîner sur ce thème"
+  },
+  "practice": {
+    "heading": "Entraînement",
+    "subheading": "Choisis un thème pour démarrer une session de questions.",
+    "backToTopics": "Retour aux thèmes",
+    "questionOf": "Question {current} sur {total}",
+    "reveal": "Voir la correction",
+    "answerLabel": "Réponse",
+    "pitfallLabel": "Piège classique",
+    "rateHeading": "Comment tu t'en sors sur celle-ci ?",
+    "rateKnown": "Je savais",
+    "ratePartial": "Partiellement",
+    "rateUnknown": "Je ne savais pas",
+    "next": "Question suivante",
+    "sessionDone": "Session terminée",
+    "sessionDoneBody": "Tu as parcouru les {count} questions de ce thème.",
+    "restartTopic": "Refaire ce thème",
+    "toDashboard": "Voir ma progression",
+    "difficulty": {
+      "easy": "Facile",
+      "medium": "Intermédiaire",
+      "hard": "Difficile"
+    }
+  },
+  "test": {
+    "heading": "Test noté",
+    "subheading": "Un tirage de questions sur tous les thèmes, comme un vrai passage en revue avant entretien. Les questions sur lesquelles tu es le moins à l'aise reviennent en priorité.",
+    "lengthLabel": "Nombre de questions",
+    "start": "Démarrer le test",
+    "questionOf": "Question {current} sur {total}",
+    "resultsHeading": "Résultat",
+    "scoreLabel": "Score global",
+    "tierReady": "Prêt pour l'entretien",
+    "tierAlmost": "Presque prêt",
+    "tierWork": "Encore du travail",
+    "breakdownHeading": "Détail par thème",
+    "retry": "Refaire un test",
+    "toDashboard": "Voir le tableau de bord",
+    "noQuestions": "Aucune question disponible pour ce test."
+  },
+  "dashboard": {
+    "heading": "Tableau de bord",
+    "subheading": "Ta progression, thème par thème.",
+    "overallMastery": "Maîtrise globale",
+    "topicsHeading": "Par thème",
+    "weakHeading": "Questions à retravailler",
+    "weakEmpty": "Aucune question faible identifiée pour l'instant. Continue à t'entraîner.",
+    "testsHeading": "Historique des tests notés",
+    "testsEmpty": "Tu n'as pas encore passé de test noté.",
+    "resetButton": "Réinitialiser ma progression",
+    "resetConfirm": "Toute ta progression sera effacée. Confirmer ?",
+    "attemptedOf": "{attempted}/{total} questions vues",
+    "emptyHeading": "Rien à afficher pour l'instant",
+    "emptyBody": "Commence une session d'entraînement pour voir ta progression apparaître ici."
+  },
+  "footer": {
+    "tagline": "Entraînement aux entretiens techniques Java, Spring et Angular.",
+    "localOnly": "Ta progression reste sur ton appareil, aucune donnée n'est envoyée à un serveur.",
+    "copyright": "© {year} Riadh MNASRI"
+  }
+}

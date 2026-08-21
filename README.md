@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StackPrep
 
-## Getting Started
+Entraînement aux entretiens techniques Java, Spring Boot et Angular : questions posées comme en vrai entretien, correction avec les pièges classiques, suivi de progression par thème et test noté façon mise en situation.
 
-First, run the development server:
+[README in English](./README.en.md)
+
+## Fonctionnalités
+
+- Banque de questions organisée par thème : Java Core, Spring Boot, JPA & Hibernate, SQL, Angular
+- Mode entraînement par thème : question, correction détaillée, piège classique, auto-évaluation (je savais / partiellement / je ne savais pas)
+- Tableau de bord de progression : maîtrise globale, détail par thème, questions à retravailler, historique des tests notés
+- Test noté : tirage de questions sur tous les thèmes, pondéré vers les points faibles, avec un score final et un niveau (prêt / presque prêt / à retravailler)
+- Interface bilingue français/anglais
+
+Contrairement à devupnow.fr, StackPrep n'a pas de compte utilisateur, de classement entre développeurs ni d'application mobile : c'est un outil d'entraînement personnel qui tourne entièrement dans le navigateur, sans backend.
+
+## Stack
+
+- Next.js (App Router, Turbopack)
+- TypeScript
+- Tailwind CSS
+- next-intl pour le routage et le contenu bilingues
+- Stockage local (`localStorage`) pour la progression, aucune base de données
+
+## Développement local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'application tourne sur [http://localhost:3690](http://localhost:3690).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables d'environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Aucune variable d'environnement n'est nécessaire : l'application n'a pas de backend.
 
-## Learn More
+## Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Pas de suite de tests dédiée pour l'instant : c'est une application de contenu, pas un projet de démonstration d'architecture.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Déploiement
 
-## Deploy on Vercel
+Déployé sur Vercel, avec l'intégration GitHub connectée : un push sur `main` déclenche un déploiement en production.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## État d'avancement
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [x] Moteur d'entraînement (questions, correction, auto-évaluation)
+- [x] Tableau de bord de progression
+- [x] Test noté pondéré
+- [ ] Étoffer la banque de questions au fil du temps
+- [ ] Ajouter d'autres thèmes si besoin (Docker, Kubernetes, system design...)
+
+## Licence
+
+© 2026 Riadh MNASRI

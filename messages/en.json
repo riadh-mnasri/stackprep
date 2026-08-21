@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "title": "StackPrep — Java, Spring, Angular interview prep",
+    "description": "Train for Java, Spring Boot and Angular technical interviews with real questions, detailed corrections and progress tracking."
+  },
+  "nav": {
+    "home": "Home",
+    "practice": "Practice",
+    "test": "Graded test",
+    "dashboard": "Dashboard"
+  },
+  "home": {
+    "kicker": "Technical interview prep",
+    "title": "Get ready for Java, Spring and Angular interviews",
+    "subtitle": "Real interview questions, corrections that call out the classic traps, and a weak-spot tracker by topic.",
+    "ctaPractice": "Start practicing",
+    "ctaTest": "Take the graded test",
+    "topicsHeading": "Topics covered",
+    "statsHeading": "Your progress",
+    "questionsCount": "{count} questions",
+    "howItWorksHeading": "How it works",
+    "step1Title": "Answer it in your head",
+    "step1Body": "Every question is phrased the way a real interviewer would ask it, no hints.",
+    "step2Title": "Reveal the correction",
+    "step2Body": "A full answer, plus the trap most candidates fall into on that exact question.",
+    "step3Title": "Rate yourself",
+    "step3Body": "I knew it, partially, or not at all: this feeds your progress dashboard."
+  },
+  "topic": {
+    "practiceLink": "Practice this topic"
+  },
+  "practice": {
+    "heading": "Practice",
+    "subheading": "Pick a topic to start a question session.",
+    "backToTopics": "Back to topics",
+    "questionOf": "Question {current} of {total}",
+    "reveal": "Show correction",
+    "answerLabel": "Answer",
+    "pitfallLabel": "Common trap",
+    "rateHeading": "How did you do on this one?",
+    "rateKnown": "I knew it",
+    "ratePartial": "Partially",
+    "rateUnknown": "I didn't know",
+    "next": "Next question",
+    "sessionDone": "Session complete",
+    "sessionDoneBody": "You've gone through all {count} questions in this topic.",
+    "restartTopic": "Redo this topic",
+    "toDashboard": "See my progress",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    }
+  },
+  "test": {
+    "heading": "Graded test",
+    "subheading": "A draw of questions across every topic, like a real pre-interview review. Questions you're weakest on come up first.",
+    "lengthLabel": "Number of questions",
+    "start": "Start the test",
+    "questionOf": "Question {current} of {total}",
+    "resultsHeading": "Result",
+    "scoreLabel": "Overall score",
+    "tierReady": "Interview ready",
+    "tierAlmost": "Almost ready",
+    "tierWork": "Still work to do",
+    "breakdownHeading": "Breakdown by topic",
+    "retry": "Take another test",
+    "toDashboard": "See the dashboard",
+    "noQuestions": "No questions available for this test."
+  },
+  "dashboard": {
+    "heading": "Dashboard",
+    "subheading": "Your progress, topic by topic.",
+    "overallMastery": "Overall mastery",
+    "topicsHeading": "By topic",
+    "weakHeading": "Questions to revisit",
+    "weakEmpty": "No weak questions identified yet. Keep practicing.",
+    "testsHeading": "Graded test history",
+    "testsEmpty": "You haven't taken a graded test yet.",
+    "resetButton": "Reset my progress",
+    "resetConfirm": "Your entire progress will be erased. Confirm?",
+    "attemptedOf": "{attempted}/{total} questions seen",
+    "emptyHeading": "Nothing to show yet",
+    "emptyBody": "Start a practice session to see your progress appear here."
+  },
+  "footer": {
+    "tagline": "Interview training for Java, Spring and Angular.",
+    "localOnly": "Your progress stays on your device, nothing is sent to a server.",
+    "copyright": "© {year} Riadh MNASRI"
+  }
+}
