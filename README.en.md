@@ -8,6 +8,7 @@ Interview training for Java, Cloud, Data and AI technical interviews: questions 
 
 ## Table of contents
 
+- [Why AceReady?](#why-aceready)
 - [Features](#features)
 - [Preview](#preview)
 - [Tech stack](#tech-stack)
@@ -18,6 +19,10 @@ Interview training for Java, Cloud, Data and AI technical interviews: questions 
 - [Deployment](#deployment)
 - [Roadmap](#roadmap)
 - [License](#license)
+
+## Why AceReady?
+
+The name comes from the expression "ace it": the app exists to get you ready to ace your next technical interview. The project was originally called StackPrep, but that name directly collided with an existing product, [stackprep.app](https://www.stackprep.app/), which offers the same concept under the same name. Rather than keep feeding that confusion, the project was renamed.
 
 ## Features
 

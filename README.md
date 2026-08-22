@@ -8,6 +8,7 @@ Entraînement aux entretiens techniques Java, Cloud, Data et IA : questions pos�
 
 ## Sommaire
 
+- [Pourquoi AceReady ?](#pourquoi-aceready-)
 - [Fonctionnalités](#fonctionnalités)
 - [Aperçu](#aperçu)
 - [Stack technique](#stack-technique)
@@ -18,6 +19,10 @@ Entraînement aux entretiens techniques Java, Cloud, Data et IA : questions pos�
 - [Déploiement](#déploiement)
 - [État d'avancement](#état-davancement)
 - [Licence](#licence)
+
+## Pourquoi AceReady ?
+
+Le nom vient de l'expression « ace it », réussir haut la main : l'appli existe pour te rendre prêt à ace ton prochain entretien technique. Le projet s'appelait à l'origine StackPrep, mais ce nom entrait en collision directe avec un produit existant, [stackprep.app](https://www.stackprep.app/), qui propose le même concept sous le même nom. Plutôt que d'entretenir la confusion, le projet a été renommé.
 
 ## Fonctionnalités
 

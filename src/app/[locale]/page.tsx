@@ -57,6 +57,10 @@ export default async function HomePage({
             {t("titleSuffix")}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted">{t("subtitle")}</p>
+          <p className="mt-6 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.3em] text-muted/70">
+            <span className="h-px w-8 bg-border" />
+            {t("slogan")}
+          </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
               href="/practice"
