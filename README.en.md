@@ -1,8 +1,8 @@
-# StackPrep
+# AceReady
 
-Interview training for Java, Spring Boot and Angular technical interviews: questions phrased the way a real interviewer would ask them, corrections that call out the classic traps, progress tracking by topic, and a graded test that simulates a pre-interview review.
+Interview training for Java, Cloud, Data and AI technical interviews: questions phrased the way a real interviewer would ask them, corrections that call out the classic traps, progress tracking by topic, and a graded test that simulates a pre-interview review.
 
-**Live demo: [getstackprep.vercel.app](https://getstackprep.vercel.app)**
+**Live demo: [aceready.vercel.app](https://aceready.vercel.app)**
 
 [README en français](./README.md)
 
@@ -21,20 +21,20 @@ Interview training for Java, Spring Boot and Angular technical interviews: quest
 
 ## Features
 
-- **Question bank** organized by topic: Java Core, Spring Boot, JPA & Hibernate, SQL, Angular, each question tagged with a difficulty level
+- **Question bank** organized into 16 topics: Java Core, Spring Boot, JPA & Hibernate, SQL, Angular, Kotlin, Kafka, Docker, Kubernetes, Terraform, Apache Spark, AWS, Azure, GCP, GitHub Copilot, Claude & LLM, each question tagged with a difficulty level
 - **Practice mode** per topic: the question is asked with no hint, then a detailed answer, the associated common trap, and finally a self-rating (I knew it / partially / I didn't know)
 - **Progress dashboard**: overall mastery, breakdown by topic with progress bars, list of questions to revisit, graded test history
 - **Graded test**: a draw of questions across every topic, weighted toward identified weak spots, with a final score and a readiness tier (ready / almost ready / still work to do)
 - **Bilingual interface**, French/English, with translated content, not just the UI
 - **Fully local**: no account, no data sent to a server, progress stays in the browser
 
-Unlike devupnow.fr, which inspired the concept, StackPrep has no user account, no ranking between developers and no mobile app: it's a personal training tool that runs entirely client-side.
+Unlike devupnow.fr, which inspired the original concept, AceReady has no user account, no ranking between developers and no mobile app: it's a personal training tool that runs entirely client-side.
 
 ## Preview
 
 | Home | Practice | Dashboard |
 |---|---|---|
-| ![StackPrep home page](./docs/screenshots/home.jpg) | ![Correction of an Angular question](./docs/screenshots/practice.jpg) | ![Progress dashboard](./docs/screenshots/dashboard.jpg) |
+| ![AceReady home page](./docs/screenshots/home.jpg) | ![Correction of an Angular question](./docs/screenshots/practice.jpg) | ![Progress dashboard](./docs/screenshots/dashboard.jpg) |
 
 ## Tech stack
 
@@ -49,8 +49,8 @@ Unlike devupnow.fr, which inspired the concept, StackPrep has no user account, n
 Requirements: Node.js 20+.
 
 ```bash
-git clone https://github.com/riadh-mnasri/stackprep.git
-cd stackprep
+git clone https://github.com/riadh-mnasri/aceready.git
+cd aceready
 npm install
 npm run dev
 ```
@@ -66,7 +66,7 @@ src/
   content/              Question bank and topic metadata
   i18n/                 next-intl configuration (routing, navigation)
   lib/                  Progress store (localStorage) and stats calculations
-  proxy.ts             Next.js proxy for locale routing
+  proxy.ts             Next.js proxy for locale routing and legacy domain redirect
 messages/               FR/EN translation files for the interface
 ```
 
@@ -96,8 +96,8 @@ vercel --prod
 - [x] Progress dashboard
 - [x] Graded test weighted toward weak spots
 - [x] Deployed to production
-- [ ] Grow the question bank over time
-- [ ] Add more topics if needed (Docker, Kubernetes, system design...)
+- [x] 16 topics, 134 questions
+- [ ] Keep growing the question bank over time
 
 ## License
 

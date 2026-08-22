@@ -1,8 +1,8 @@
-# StackPrep
+# AceReady
 
-Entraînement aux entretiens techniques Java, Spring Boot et Angular : questions posées comme en vrai entretien, correction avec les pièges classiques, suivi de progression par thème et test noté façon mise en situation.
+Entraînement aux entretiens techniques Java, Cloud, Data et IA : questions posées comme en vrai entretien, correction avec les pièges classiques, suivi de progression par thème et test noté façon mise en situation.
 
-**Démo en ligne : [getstackprep.vercel.app](https://getstackprep.vercel.app)**
+**Démo en ligne : [aceready.vercel.app](https://aceready.vercel.app)**
 
 [README in English](./README.en.md)
 
@@ -21,20 +21,20 @@ Entraînement aux entretiens techniques Java, Spring Boot et Angular : questions
 
 ## Fonctionnalités
 
-- **Banque de questions** organisée par thème : Java Core, Spring Boot, JPA & Hibernate, SQL, Angular, avec un niveau de difficulté par question
+- **Banque de questions** organisée en 16 thèmes : Java Core, Spring Boot, JPA & Hibernate, SQL, Angular, Kotlin, Kafka, Docker, Kubernetes, Terraform, Apache Spark, AWS, Azure, GCP, GitHub Copilot, Claude & LLM, avec un niveau de difficulté par question
 - **Mode entraînement** par thème : question posée sans indice, correction détaillée, piège classique associé, puis auto-évaluation (je savais / partiellement / je ne savais pas)
 - **Tableau de bord de progression** : maîtrise globale, détail par thème avec barres de progression, liste des questions à retravailler, historique des tests notés
 - **Test noté** : tirage de questions sur tous les thèmes, pondéré vers les points faibles identifiés, avec un score final et un niveau de préparation (prêt / presque prêt / à retravailler)
 - **Interface bilingue** français/anglais, contenu traduit et pas seulement l'UI
 - **100% local** : aucune inscription, aucune donnée envoyée à un serveur, la progression reste dans le navigateur
 
-Contrairement à devupnow.fr, dont StackPrep s'inspire pour le concept, l'application n'a pas de compte utilisateur, de classement entre développeurs ni d'application mobile : c'est un outil d'entraînement personnel qui tourne entièrement côté client.
+Contrairement à devupnow.fr, dont AceReady s'inspire pour le concept initial, l'application n'a pas de compte utilisateur, de classement entre développeurs ni d'application mobile : c'est un outil d'entraînement personnel qui tourne entièrement côté client.
 
 ## Aperçu
 
 | Accueil | Entraînement | Tableau de bord |
 |---|---|---|
-| ![Accueil de StackPrep](./docs/screenshots/home.jpg) | ![Correction d'une question Angular](./docs/screenshots/practice.jpg) | ![Tableau de bord de progression](./docs/screenshots/dashboard.jpg) |
+| ![Accueil d'AceReady](./docs/screenshots/home.jpg) | ![Correction d'une question Angular](./docs/screenshots/practice.jpg) | ![Tableau de bord de progression](./docs/screenshots/dashboard.jpg) |
 
 ## Stack technique
 
@@ -49,8 +49,8 @@ Contrairement à devupnow.fr, dont StackPrep s'inspire pour le concept, l'applic
 Prérequis : Node.js 20+.
 
 ```bash
-git clone https://github.com/riadh-mnasri/stackprep.git
-cd stackprep
+git clone https://github.com/riadh-mnasri/aceready.git
+cd aceready
 npm install
 npm run dev
 ```
@@ -66,7 +66,7 @@ src/
   content/              Banque de questions et métadonnées des thèmes
   i18n/                 Configuration next-intl (routage, navigation)
   lib/                  Store de progression (localStorage) et calculs de statistiques
-  proxy.ts             Proxy Next.js pour le routage par locale
+  proxy.ts             Proxy Next.js pour le routage par locale et la redirection de l'ancien domaine
 messages/               Fichiers de traduction FR/EN de l'interface
 ```
 
@@ -96,8 +96,8 @@ vercel --prod
 - [x] Tableau de bord de progression
 - [x] Test noté pondéré vers les points faibles
 - [x] Déployé en production
-- [ ] Étoffer la banque de questions au fil du temps
-- [ ] Ajouter d'autres thèmes si besoin (Docker, Kubernetes, system design...)
+- [x] 16 thèmes, 134 questions
+- [ ] Étoffer encore la banque de questions au fil du temps
 
 ## Licence
 

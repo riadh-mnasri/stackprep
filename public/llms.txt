@@ -1,33 +1,33 @@
-# StackPrep
+# AceReady
 
-> StackPrep is a free technical interview training tool covering Java, Spring Boot, JPA & Hibernate, SQL, Angular, Kafka, Kotlin, GitHub Copilot, AWS, Azure, Docker, Terraform, Apache Spark, Claude/LLM and GCP. It offers a bank of real interview questions with detailed answers and common candidate mistakes for each one, a self-rating practice mode, a weighted graded test, and a local progress dashboard. Available in French and English, no account required, no backend, progress stored in the visitor's browser only.
+> AceReady is a free technical interview training tool covering Java, Spring Boot, JPA & Hibernate, SQL, Angular, Kafka, Kotlin, GitHub Copilot, AWS, Azure, Docker, Terraform, Apache Spark, Claude/LLM and GCP. It offers a bank of real interview questions with detailed answers and common candidate mistakes for each one, a self-rating practice mode, a weighted graded test, and a local progress dashboard. Available in French and English, no account required, no backend, progress stored in the visitor's browser only.
 
 Built by Riadh MNASRI, a freelance Senior Tech Lead & Architect, as a free public tool inspired by devupnow.fr.
 
 ## Topics (French)
 
-- [Java Core](https://getstackprep.vercel.app/fr/practice/java-core): types, collections, streams, concurrency
-- [Spring Boot](https://getstackprep.vercel.app/fr/practice/spring-boot): dependency injection, MVC, security, testing
-- [JPA & Hibernate](https://getstackprep.vercel.app/fr/practice/jpa-hibernate): mapping, relations, caching, performance
-- [SQL](https://getstackprep.vercel.app/fr/practice/sql): joins, indexes, transactions, modeling
-- [Angular](https://getstackprep.vercel.app/fr/practice/angular): change detection, RxJS, signals, forms
-- [Claude & LLM](https://getstackprep.vercel.app/fr/practice/claude): prompting, tool use, RAG, agent security
-- [Kubernetes](https://getstackprep.vercel.app/fr/practice/kubernetes): pods, deployments, scaling, resilience
-- [GCP](https://getstackprep.vercel.app/fr/practice/gcp): compute, IAM, networking, managed data
-- [Kafka](https://getstackprep.vercel.app/fr/practice/kafka): topics, partitions, consumer groups, exactly-once
-- [Kotlin](https://getstackprep.vercel.app/fr/practice/kotlin): null safety, coroutines, sealed classes, extensions
-- [GitHub Copilot](https://getstackprep.vercel.app/fr/practice/copilot): AI-assisted development, code review, risks
-- [AWS](https://getstackprep.vercel.app/fr/practice/aws): EC2, Lambda, IAM, S3, RDS, DynamoDB
-- [Azure](https://getstackprep.vercel.app/fr/practice/azure): App Service, AKS, Entra ID, Functions
-- [Docker](https://getstackprep.vercel.app/fr/practice/docker): images, layers, networking, multi-stage builds
-- [Terraform](https://getstackprep.vercel.app/fr/practice/terraform): state, plan/apply, modules, configuration drift
-- [Apache Spark](https://getstackprep.vercel.app/fr/practice/spark): RDD, DataFrame, shuffle, structured streaming
+- [Java Core](https://aceready.vercel.app/fr/practice/java-core): types, collections, streams, concurrency
+- [Spring Boot](https://aceready.vercel.app/fr/practice/spring-boot): dependency injection, MVC, security, testing
+- [JPA & Hibernate](https://aceready.vercel.app/fr/practice/jpa-hibernate): mapping, relations, caching, performance
+- [SQL](https://aceready.vercel.app/fr/practice/sql): joins, indexes, transactions, modeling
+- [Angular](https://aceready.vercel.app/fr/practice/angular): change detection, RxJS, signals, forms
+- [Claude & LLM](https://aceready.vercel.app/fr/practice/claude): prompting, tool use, RAG, agent security
+- [Kubernetes](https://aceready.vercel.app/fr/practice/kubernetes): pods, deployments, scaling, resilience
+- [GCP](https://aceready.vercel.app/fr/practice/gcp): compute, IAM, networking, managed data
+- [Kafka](https://aceready.vercel.app/fr/practice/kafka): topics, partitions, consumer groups, exactly-once
+- [Kotlin](https://aceready.vercel.app/fr/practice/kotlin): null safety, coroutines, sealed classes, extensions
+- [GitHub Copilot](https://aceready.vercel.app/fr/practice/copilot): AI-assisted development, code review, risks
+- [AWS](https://aceready.vercel.app/fr/practice/aws): EC2, Lambda, IAM, S3, RDS, DynamoDB
+- [Azure](https://aceready.vercel.app/fr/practice/azure): App Service, AKS, Entra ID, Functions
+- [Docker](https://aceready.vercel.app/fr/practice/docker): images, layers, networking, multi-stage builds
+- [Terraform](https://aceready.vercel.app/fr/practice/terraform): state, plan/apply, modules, configuration drift
+- [Apache Spark](https://aceready.vercel.app/fr/practice/spark): RDD, DataFrame, shuffle, structured streaming
 
 ## Topics (English)
 
-Every topic above is also available under the same path with `/en/` instead of `/fr/`, for example [Java Core (English)](https://getstackprep.vercel.app/en/practice/java-core).
+Every topic above is also available under the same path with `/en/` instead of `/fr/`, for example [Java Core (English)](https://aceready.vercel.app/en/practice/java-core).
 
 ## Other pages
 
-- [Graded test](https://getstackprep.vercel.app/fr/test): a weighted draw of questions across every topic with a final readiness score
-- [Sitemap](https://getstackprep.vercel.app/sitemap.xml): full list of indexable URLs
+- [Graded test](https://aceready.vercel.app/fr/test): a weighted draw of questions across every topic with a final readiness score
+- [Sitemap](https://aceready.vercel.app/sitemap.xml): full list of indexable URLs

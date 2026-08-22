@@ -19,7 +19,7 @@ interface ProgressData {
   tests: TestResult[];
 }
 
-const STORAGE_KEY = "stackprep-progress";
+const STORAGE_KEY = "aceready-progress";
 
 const emptyData: ProgressData = { questions: {}, tests: [] };
 

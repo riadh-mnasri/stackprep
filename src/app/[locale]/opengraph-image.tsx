@@ -3,7 +3,7 @@ import { hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 
-export const alt = "StackPrep";
+export const alt = "AceReady";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -72,7 +72,7 @@ export default async function Image({
           <span
             style={{ fontSize: "34px", fontWeight: 700, color: "#f8f4fb" }}
           >
-            StackPrep
+            AceReady
           </span>
         </div>
         <div

@@ -26,7 +26,7 @@ export function Header() {
           <span className="btn-gradient flex h-8 w-8 items-center justify-center rounded-lg">
             <TopicIcon topicId="java-core" className="h-4.5 w-4.5" />
           </span>
-          <span className="text-[15px]">StackPrep</span>
+          <span className="text-[15px]">AceReady</span>
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex">
