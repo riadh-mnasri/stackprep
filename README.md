@@ -101,7 +101,7 @@ vercel --prod
 - [x] Tableau de bord de progression
 - [x] Test noté pondéré vers les points faibles
 - [x] Déployé en production
-- [x] 16 thèmes, 134 questions
+- [x] 16 thèmes, 214 questions, dont des questions niveau senior/architecte avec exemples de code
 - [ ] Étoffer encore la banque de questions au fil du temps
 
 ## Licence

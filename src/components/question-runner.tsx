@@ -101,6 +101,18 @@ export function QuestionRunner({
                 {question.answer[locale]}
               </p>
             </div>
+            {question.code && (
+              <div className="overflow-hidden rounded-xl border border-border bg-background/60">
+                <div className="border-b border-border px-4 py-1.5">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                    {question.code.lang}
+                  </span>
+                </div>
+                <pre className="overflow-x-auto p-4 text-xs leading-relaxed">
+                  <code className="font-mono">{question.code.snippet}</code>
+                </pre>
+              </div>
+            )}
             <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
               <p className="mb-1 text-xs font-medium uppercase tracking-wide text-warning">
                 {t("pitfallLabel")}

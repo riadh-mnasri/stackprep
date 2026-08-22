@@ -101,7 +101,7 @@ vercel --prod
 - [x] Progress dashboard
 - [x] Graded test weighted toward weak spots
 - [x] Deployed to production
-- [x] 16 topics, 134 questions
+- [x] 16 topics, 214 questions, including senior/architect-level questions with code examples
 - [ ] Keep growing the question bank over time
 
 ## License

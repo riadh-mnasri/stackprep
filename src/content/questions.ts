@@ -23,6 +23,11 @@ export interface LocalizedText {
   en: string;
 }
 
+export interface CodeExample {
+  lang: string;
+  snippet: string;
+}
+
 export interface Question {
   id: string;
   topicId: TopicId;
@@ -30,6 +35,7 @@ export interface Question {
   question: LocalizedText;
   answer: LocalizedText;
   pitfall: LocalizedText;
+  code?: CodeExample;
   tags: string[];
 }
 
@@ -2476,5 +2482,1571 @@ export const questions: Question[] = [
       en: "The trap is believing Structured Streaming guarantees strict, millisecond-level real-time processing: it's a micro-batch model, with typical latency from a few hundred milliseconds to a few seconds depending on configuration, which is enough for the vast majority of use cases but doesn't fit a genuinely sub-millisecond latency need, where a native streaming engine like Flink would be better suited.",
     },
     tags: ["structured-streaming", "batch-processing", "real-time"],
+  },
+
+  // Java Core (senior/architecte)
+  {
+    id: "java-memory-model-happens-before",
+    topicId: "java-core",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que la relation happens-before dans le Java Memory Model, et pourquoi une variable partagée sans synchronisation peut-elle donner un résultat incohérent entre threads ?",
+      en: "What is the happens-before relation in the Java Memory Model, and why can a shared variable with no synchronization give an inconsistent result across threads ?",
+    },
+    answer: {
+      fr: "Le Java Memory Model ne garantit pas qu'un thread voie immédiatement les écritures faites par un autre thread : sans relation happens-before établie entre l'écriture et la lecture, le compilateur, le processeur ou le cache peuvent réordonner ou retarder la visibilité d'une écriture, y compris la garder uniquement dans un registre ou un cache local au thread. Le mot-clé volatile, un bloc synchronized, ou les classes de java.util.concurrent établissent une relation happens-before qui force la visibilité et interdit certains réordonnancements. Sans cette garantie, un thread peut boucler indéfiniment sur une valeur qu'il croit toujours fausse alors qu'un autre thread l'a modifiée, simplement parce que rien ne l'oblige à relire la mémoire principale.",
+      en: "The Java Memory Model doesn't guarantee a thread immediately sees writes made by another thread: without an established happens-before relation between the write and the read, the compiler, the processor or the cache can reorder or delay a write's visibility, including keeping it only in a register or a thread-local cache. The volatile keyword, a synchronized block, or the java.util.concurrent classes establish a happens-before relation that forces visibility and forbids certain reorderings. Without that guarantee, a thread can loop indefinitely on a value it believes is still false even though another thread changed it, simply because nothing forces it to re-read main memory.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est de croire que déclarer une variable volatile la rend atomique pour des opérations composées comme un incrément : volatile ne garantit que la visibilité et l'ordre, pas l'atomicité, un compteur volatile incrémenté par plusieurs threads reste sujet aux races conditions, il faut AtomicInteger ou une synchronisation explicite.",
+      en: "The classic interview trap is believing declaring a variable volatile makes it atomic for compound operations like an increment: volatile only guarantees visibility and ordering, not atomicity, a volatile counter incremented by several threads is still subject to race conditions, you need AtomicInteger or explicit synchronization.",
+    },
+    code: {
+      lang: "java",
+      snippet:
+        "// Sans volatile : le thread lecteur peut boucler indéfiniment\nclass Flag {\n    private boolean ready = false; // manque volatile\n\n    void writer() { ready = true; }\n\n    void reader() {\n        while (!ready) {\n            // peut ne jamais voir la mise a jour faite par writer()\n        }\n        System.out.println(\"pret\");\n    }\n}",
+    },
+    tags: ["memory-model", "concurrency", "volatile"],
+  },
+  {
+    id: "java-classloading-and-metaspace",
+    topicId: "java-core",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne le chargement des classes en Java, et qu'est-ce que Metaspace a changé par rapport à l'ancienne PermGen ?",
+      en: "How does class loading work in Java, and what did Metaspace change compared to the old PermGen ?",
+    },
+    answer: {
+      fr: "Le chargement d'une classe suit une hiérarchie de class loaders, du bootstrap loader qui charge les classes cœur du JDK, jusqu'au class loader applicatif, chacun délégant d'abord la recherche à son parent avant de chercher lui-même, ce qui évite qu'une application redéfinisse par erreur une classe système. Avant Java 8, les métadonnées de classes vivaient dans PermGen, une zone de taille fixe dans le tas qui provoquait fréquemment des OutOfMemoryError dans les applications qui chargeaient beaucoup de classes dynamiquement, comme les serveurs d'applications avec rechargement à chaud. Metaspace a déplacé ces métadonnées vers la mémoire native du système d'exploitation, avec une taille qui s'ajuste dynamiquement par défaut, éliminant cette classe entière de problèmes.",
+      en: "Class loading follows a hierarchy of class loaders, from the bootstrap loader that loads the JDK's core classes, up to the application class loader, each one first delegating the search to its parent before searching itself, which prevents an application from accidentally redefining a system class. Before Java 8, class metadata lived in PermGen, a fixed-size area within the heap that frequently caused OutOfMemoryError in applications that loaded many classes dynamically, like application servers with hot reloading. Metaspace moved that metadata to the operating system's native memory, with a size that adjusts dynamically by default, eliminating that entire class of problems.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que Metaspace ne peut plus jamais saturer la mémoire : sans limite explicite via MaxMetaspaceSize, une fuite de class loaders, par exemple des rechargements répétés d'une application qui ne libère jamais les anciens loaders, peut toujours épuiser la mémoire native du système, juste avec un message d'erreur différent de PermGen.",
+      en: "The trap is believing Metaspace can no longer run out of memory at all: without an explicit limit via MaxMetaspaceSize, a class loader leak, for example repeated redeployments of an application that never releases old loaders, can still exhaust the system's native memory, just with a different error message than PermGen's.",
+    },
+    tags: ["classloading", "metaspace", "jvm-internals"],
+  },
+  {
+    id: "java-virtual-threads-project-loom",
+    topicId: "java-core",
+    difficulty: "hard",
+    question: {
+      fr: "Que sont les threads virtuels introduits par Project Loom, et en quoi changent-ils l'approche de la concurrence en Java ?",
+      en: "What are the virtual threads introduced by Project Loom, and how do they change the approach to concurrency in Java ?",
+    },
+    answer: {
+      fr: "Un thread virtuel est un thread géré par la JVM plutôt que directement mappé un pour un sur un thread du système d'exploitation, ce qui permet d'en créer des millions sans épuiser les ressources, contrairement aux threads plateforme classiques qui coûtent cher en mémoire et en changement de contexte. Quand un thread virtuel bloque sur une opération d'I/O, la JVM démonte automatiquement le thread plateforme sous-jacent pour le réutiliser ailleurs, puis le remonte quand l'opération se termine, rendant le code bloquant classique aussi efficace qu'une approche réactive sans en avoir la complexité. Ça permet d'écrire du code séquentiel simple, un thread par requête par exemple, tout en gardant un débit élevé sur des charges dominées par l'attente d'I/O.",
+      en: "A virtual thread is a thread managed by the JVM rather than directly mapped one-to-one onto an operating system thread, making it possible to create millions of them without exhausting resources, unlike classic platform threads which are expensive in memory and context switching. When a virtual thread blocks on an I/O operation, the JVM automatically unmounts the underlying platform thread to reuse it elsewhere, then remounts it once the operation completes, making classic blocking code as efficient as a reactive approach without its complexity. This lets you write simple sequential code, one thread per request for example, while keeping high throughput on workloads dominated by I/O waits.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que les threads virtuels accélèrent aussi le calcul intensif en CPU : ils n'apportent aucun bénéfice pour du code qui ne bloque jamais sur de l'I/O, leur intérêt est spécifiquement de démultiplier la concurrence sur des charges qui attendent beaucoup, un bloc synchronized mal utilisé peut aussi épingler un thread virtuel sur son thread plateforme et annuler l'avantage.",
+      en: "The trap is believing virtual threads also speed up CPU-intensive computation: they bring no benefit for code that never blocks on I/O, their purpose is specifically to multiply concurrency on workloads that wait a lot, a poorly used synchronized block can also pin a virtual thread to its platform thread and cancel the benefit.",
+    },
+    code: {
+      lang: "java",
+      snippet:
+        "// Un thread virtuel par tache, sans pool a dimensionner\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    for (int i = 0; i < 100_000; i++) {\n        executor.submit(() -> {\n            callBlockingService(); // bloque sans gaspiller un thread OS\n            return null;\n        });\n    }\n}",
+    },
+    tags: ["virtual-threads", "project-loom", "concurrency"],
+  },
+  {
+    id: "java-jit-compilation-tiers",
+    topicId: "java-core",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne la compilation JIT à plusieurs niveaux de la JVM, et pourquoi une application Java met-elle du temps à atteindre ses performances de pointe ?",
+      en: "How does the JVM's tiered JIT compilation work, and why does a Java application take time to reach its peak performance ?",
+    },
+    answer: {
+      fr: "Le code Java est d'abord exécuté en mode interprété, lent mais immédiat. La JVM surveille en parallèle les méthodes les plus fréquemment appelées, dites chaudes, et les compile progressivement en code natif via deux compilateurs JIT : C1, rapide à compiler mais avec des optimisations limitées, puis C2, plus lent à compiler mais capable d'optimisations agressives comme l'inlining ou l'analyse d'échappement. Ce processus explique le phénomène de warm-up : une application vient de démarrer tourne d'abord en interprété ou en compilation C1, et n'atteint son débit maximal qu'après que les chemins chauds aient été identifiés et recompilés en C2, ce qui peut prendre plusieurs minutes sous charge réelle.",
+      en: "Java code first runs in interpreted mode, slow but immediate. The JVM simultaneously monitors the most frequently called methods, called hot methods, and progressively compiles them to native code through two JIT compilers: C1, fast to compile but with limited optimizations, then C2, slower to compile but capable of aggressive optimizations like inlining or escape analysis. This process explains the warm-up phenomenon: an application that just started runs first in interpreted or C1-compiled mode, and only reaches its maximum throughput once hot paths have been identified and recompiled with C2, which can take several minutes under real load.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier l'impact du warm-up sur des environnements qui redémarrent souvent les instances, comme des fonctions serverless ou des déploiements fréquents en conteneurs : chaque nouvelle instance repart de zéro en interprété, ce qui peut fausser des benchmarks faits juste après un déploiement ou dégrader la latence des premières requêtes après un scale-up.",
+      en: "The trap is forgetting the warm-up impact on environments that restart instances often, like serverless functions or frequent container deployments: every new instance starts from scratch in interpreted mode, which can skew benchmarks run right after a deployment or degrade latency for the first requests after a scale-up.",
+    },
+    tags: ["jit", "jvm-internals", "performance"],
+  },
+  {
+    id: "java-fork-join-vs-executor",
+    topicId: "java-core",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre le framework Fork/Join et un ExecutorService classique, et quand le work-stealing apporte-t-il un vrai bénéfice ?",
+      en: "What is the difference between the Fork/Join framework and a classic ExecutorService, and when does work-stealing bring a real benefit ?",
+    },
+    answer: {
+      fr: "Un ExecutorService classique distribue des tâches indépendantes vers un pool de threads fixe, chaque thread traitant les tâches d'une file partagée jusqu'à épuisement. Le framework Fork/Join est conçu pour des tâches récursives qui se divisent elles-mêmes en sous-tâches plus petites, chaque thread du pool ayant sa propre file de travail, et le work-stealing permet à un thread devenu inactif de voler des tâches dans la file d'un thread encore occupé plutôt que de rester oisif. Ça convient particulièrement bien aux algorithmes de type diviser pour régner, comme trier ou parcourir une grande structure en la découpant récursivement en morceaux traités en parallèle.",
+      en: "A classic ExecutorService distributes independent tasks to a fixed thread pool, each thread processing tasks from a shared queue until it's exhausted. The Fork/Join framework is designed for recursive tasks that split themselves into smaller subtasks, each thread in the pool having its own work queue, and work-stealing lets an idle thread steal tasks from a still-busy thread's queue rather than sitting idle. This fits particularly well with divide-and-conquer algorithms, like sorting or traversing a large structure by recursively splitting it into chunks processed in parallel.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser Fork/Join pour des tâches qui ne se divisent pas naturellement ou qui bloquent sur de l'I/O : le work-stealing n'apporte rien sur des tâches indépendantes de taille fixe, et une tâche qui bloque longtemps sur une ressource externe dans un pool Fork/Join peut affamer le pool commun partagé par défaut avec d'autres usages, comme les streams parallèles.",
+      en: "The trap is using Fork/Join for tasks that don't naturally split or that block on I/O: work-stealing brings nothing for independent, fixed-size tasks, and a task that blocks for a long time on an external resource inside a Fork/Join pool can starve the common pool shared by default with other usages, like parallel streams.",
+    },
+    code: {
+      lang: "java",
+      snippet:
+        "class SumTask extends RecursiveTask<Long> {\n    private final int[] arr; private final int lo, hi;\n    SumTask(int[] arr, int lo, int hi) { this.arr = arr; this.lo = lo; this.hi = hi; }\n\n    protected Long compute() {\n        if (hi - lo <= 1000) {\n            long sum = 0;\n            for (int i = lo; i < hi; i++) sum += arr[i];\n            return sum;\n        }\n        int mid = (lo + hi) / 2;\n        SumTask left = new SumTask(arr, lo, mid);\n        left.fork();\n        long rightResult = new SumTask(arr, mid, hi).compute();\n        return left.join() + rightResult;\n    }\n}",
+    },
+    tags: ["fork-join", "work-stealing", "concurrency"],
+  },
+
+  // Spring Boot (senior/architecte)
+  {
+    id: "spring-aop-proxy-mechanics",
+    topicId: "spring-boot",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne l'AOP de Spring sous le capot, et pourquoi une méthode privée ou une classe finale ne peut-elle pas être interceptée ?",
+      en: "How does Spring's AOP work under the hood, and why can't a private method or a final class be intercepted ?",
+    },
+    answer: {
+      fr: "Spring implémente l'AOP, utilisée par exemple pour @Transactional ou @Cacheable, en générant un proxy autour du bean réel au démarrage du contexte. Si la classe implémente une interface, Spring utilise un proxy JDK dynamique qui implémente cette même interface et délègue les appels. Si la classe n'implémente pas d'interface, Spring utilise CGLIB, qui génère une sous-classe à l'exécution qui hérite de la classe cible et surcharge ses méthodes pour y injecter le comportement additionnel. Dans les deux cas, l'interception ne fonctionne que sur des appels qui passent par le proxy de l'extérieur : une méthode privée n'est jamais visible depuis l'extérieur donc jamais interceptée, et une classe ou une méthode finale ne peut pas être sous-classée ou surchargée par CGLIB.",
+      en: "Spring implements AOP, used for example by @Transactional or @Cacheable, by generating a proxy around the real bean at context startup. If the class implements an interface, Spring uses a JDK dynamic proxy that implements that same interface and delegates calls. If the class implements no interface, Spring uses CGLIB, which generates a subclass at runtime that extends the target class and overrides its methods to inject the additional behavior. In both cases, interception only works on calls that go through the proxy from the outside: a private method is never visible from the outside so it's never intercepted, and a final class or method can't be subclassed or overridden by CGLIB.",
+    },
+    pitfall: {
+      fr: "Le piège est de mettre @Transactional ou @Cacheable sur une méthode privée en pensant que ça fonctionnera silencieusement de façon dégradée : Spring ne lève souvent aucune erreur, l'annotation est simplement ignorée sans avertissement clair, ce qui rend le bug difficile à repérer sans comprendre le mécanisme de proxy sous-jacent.",
+      en: "The trap is putting @Transactional or @Cacheable on a private method thinking it will just silently work in a degraded way: Spring often throws no error, the annotation is simply ignored with no clear warning, which makes the bug hard to spot without understanding the underlying proxy mechanism.",
+    },
+    tags: ["aop", "proxies", "spring-internals"],
+  },
+  {
+    id: "spring-application-context-refresh",
+    topicId: "spring-boot",
+    difficulty: "hard",
+    question: {
+      fr: "Que se passe-t-il pendant la méthode refresh() de l'ApplicationContext au démarrage d'une application Spring Boot ?",
+      en: "What happens during the ApplicationContext's refresh() method at Spring Boot startup ?",
+    },
+    answer: {
+      fr: "refresh() orchestre toute l'initialisation du contexte en une séquence d'étapes précises : préparer le contexte, charger les définitions de bean sans encore les instancier, invoquer les BeanFactoryPostProcessor qui peuvent modifier ces définitions avant toute instanciation, enregistrer les BeanPostProcessor qui interviendront autour de chaque création de bean, puis instancier tous les beans singletons non paresseux dans l'ordre de leurs dépendances, et enfin publier un événement de contexte prêt. Comprendre cet ordre explique pourquoi un BeanFactoryPostProcessor peut ajouter ou modifier des définitions de bean avant leur création, alors qu'un BeanPostProcessor n'agit qu'après qu'un bean donné a déjà été instancié.",
+      en: "refresh() orchestrates the whole context initialization in a precise sequence of steps: prepare the context, load bean definitions without instantiating them yet, invoke BeanFactoryPostProcessors which can modify those definitions before any instantiation, register BeanPostProcessors that will act around every bean creation, then instantiate every non-lazy singleton bean in dependency order, and finally publish a context-refreshed event. Understanding this order explains why a BeanFactoryPostProcessor can add or modify bean definitions before their creation, while a BeanPostProcessor only acts after a given bean has already been instantiated.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de confondre BeanFactoryPostProcessor et BeanPostProcessor : le premier agit sur les métadonnées de définition avant toute création d'instance, comme PropertySourcesPlaceholderConfigurer qui résout les valeurs ${...}, le second agit sur les instances déjà créées, comme l'application d'un proxy AOP, les mélanger révèle une compréhension superficielle du cycle de vie.",
+      en: "The interview trap is confusing BeanFactoryPostProcessor with BeanPostProcessor: the former acts on definition metadata before any instance is created, like PropertySourcesPlaceholderConfigurer resolving ${...} values, the latter acts on already-created instances, like applying an AOP proxy, mixing them up reveals a shallow understanding of the lifecycle.",
+    },
+    tags: ["application-context", "spring-internals", "lifecycle"],
+  },
+  {
+    id: "spring-boot-graceful-shutdown",
+    topicId: "spring-boot",
+    difficulty: "hard",
+    question: {
+      fr: "Comment configurer un arrêt propre (graceful shutdown) d'une application Spring Boot, et pourquoi est-ce particulièrement important sous Kubernetes ?",
+      en: "How do you configure a graceful shutdown for a Spring Boot application, and why does it matter especially under Kubernetes ?",
+    },
+    answer: {
+      fr: "Activer server.shutdown=graceful fait que Spring Boot, en recevant un signal d'arrêt, arrête d'accepter de nouvelles requêtes mais laisse les requêtes déjà en cours se terminer normalement dans une fenêtre de temps configurable, plutôt que de couper brutalement les connexions actives. C'est particulièrement important sous Kubernetes parce que la séquence d'arrêt d'un Pod n'est pas instantanée : Kubernetes retire le Pod du service au même moment qu'il envoie SIGTERM au conteneur, mais à cause de la propagation réseau, des requêtes déjà routées vers ce Pod peuvent continuer à arriver pendant quelques secondes après le SIGTERM, un arrêt brutal côté application les ferait échouer inutilement.",
+      en: "Enabling server.shutdown=graceful makes Spring Boot, upon receiving a shutdown signal, stop accepting new requests but let already in-flight requests finish normally within a configurable time window, rather than abruptly cutting active connections. This matters especially under Kubernetes because a Pod's shutdown sequence isn't instantaneous: Kubernetes removes the Pod from the service at the same time it sends SIGTERM to the container, but due to network propagation, requests already routed to that Pod can keep arriving for a few seconds after SIGTERM, an abrupt shutdown on the application side would needlessly fail them.",
+    },
+    pitfall: {
+      fr: "Le piège est de configurer le graceful shutdown côté application sans ajouter un preStop hook avec un court délai côté Kubernetes : sans ce délai, le conteneur peut recevoir SIGTERM et commencer à s'arrêter avant que le retrait du Pod du service ait fini de se propager sur tous les nœuds, laissant une fenêtre où des requêtes arrivent encore sur un Pod déjà en train de fermer ses connexions.",
+      en: "The trap is configuring graceful shutdown on the application side without adding a preStop hook with a short delay on the Kubernetes side: without that delay, the container can receive SIGTERM and start shutting down before the Pod's removal from the service has finished propagating across all nodes, leaving a window where requests still arrive at a Pod already closing its connections.",
+    },
+    code: {
+      lang: "yaml",
+      snippet:
+        "# application.yml\nserver:\n  shutdown: graceful\nspring:\n  lifecycle:\n    timeout-per-shutdown-phase: 20s\n---\n# deployment.yaml (extrait)\nlifecycle:\n  preStop:\n    exec:\n      command: [\"sh\", \"-c\", \"sleep 10\"]",
+    },
+    tags: ["graceful-shutdown", "kubernetes", "production-readiness"],
+  },
+  {
+    id: "spring-cache-abstraction-pitfalls",
+    topicId: "spring-boot",
+    difficulty: "hard",
+    question: {
+      fr: "Quels sont les pièges les plus fréquents de l'abstraction de cache de Spring avec @Cacheable ?",
+      en: "What are the most common pitfalls of Spring's cache abstraction with @Cacheable ?",
+    },
+    answer: {
+      fr: "Par défaut, la clé de cache est générée à partir de tous les arguments de la méthode via leurs equals() et hashCode() : passer un objet complexe mal équipé de ces méthodes, ou plusieurs arguments dans un ordre qui varie, peut produire des clés incohérentes qui empêchent le cache de fonctionner comme prévu, d'où l'intérêt d'utiliser l'attribut key avec une expression SpEL explicite pour des cas non triviaux. Comme pour @Transactional, @Cacheable repose sur un proxy AOP, donc un appel interne à this depuis une autre méthode de la même classe contourne complètement le cache. Enfin, sans stratégie d'éviction ou de durée de vie explicite, un cache mal dimensionné peut soit grossir indéfiniment jusqu'à épuiser la mémoire, soit servir des données périmées bien après qu'elles aient changé en base.",
+      en: "By default, the cache key is generated from all of a method's arguments via their equals() and hashCode(), passing a complex object poorly equipped with those methods, or several arguments in a varying order, can produce inconsistent keys that prevent the cache from working as intended, which is why using the key attribute with an explicit SpEL expression matters for non-trivial cases. Like @Transactional, @Cacheable relies on an AOP proxy, so an internal call to this from another method in the same class completely bypasses the cache. Finally, without an explicit eviction strategy or time-to-live, a poorly sized cache can either grow indefinitely until it exhausts memory, or serve stale data well after it has changed in the database.",
+    },
+    pitfall: {
+      fr: "Le piège classique est d'oublier @CacheEvict ou @CachePut lors d'une mise à jour des données sous-jacentes : le cache continue alors silencieusement de servir l'ancienne valeur, un bug particulièrement pernicieux car il ne se manifeste que par des données visiblement fausses, sans exception ni log d'erreur.",
+      en: "The classic trap is forgetting @CacheEvict or @CachePut when updating the underlying data: the cache then silently keeps serving the old value, a particularly insidious bug since it only manifests as visibly wrong data, with no exception or error log.",
+    },
+    tags: ["caching", "spring-cache", "pitfalls"],
+  },
+  {
+    id: "spring-boot-observability-stack",
+    topicId: "spring-boot",
+    difficulty: "hard",
+    question: {
+      fr: "Comment Micrometer et le tracing distribué s'articulent-ils dans une architecture microservices Spring Boot observable ?",
+      en: "How do Micrometer and distributed tracing fit together in an observable Spring Boot microservices architecture ?",
+    },
+    answer: {
+      fr: "Micrometer fournit une façade de métriques indépendante du système de monitoring cible, comme Prometheus ou Datadog : le code applicatif instrumente des compteurs, jauges et temporisations une seule fois, et Micrometer se charge de les exporter dans le format attendu par le backend choisi. Pour le tracing distribué, qui suit une requête à travers plusieurs microservices, Spring Boot s'appuie sur Micrometer Tracing, qui propage un identifiant de trace et de span à travers les appels HTTP et les files de messages, et exporte ces traces vers un collecteur compatible OpenTelemetry, comme Zipkin ou Jaeger. Ensemble, métriques et traces donnent une vue à la fois quantitative, combien de requêtes et à quelle latence, et qualitative, où exactement le temps est passé pour une requête donnée à travers le système.",
+      en: "Micrometer provides a metrics facade independent of the target monitoring system, like Prometheus or Datadog: application code instruments counters, gauges and timers once, and Micrometer handles exporting them in the format expected by the chosen backend. For distributed tracing, which follows a request across several microservices, Spring Boot relies on Micrometer Tracing, which propagates a trace and span identifier across HTTP calls and message queues, and exports those traces to an OpenTelemetry-compatible collector, like Zipkin or Jaeger. Together, metrics and traces give both a quantitative view, how many requests and at what latency, and a qualitative one, exactly where time was spent for a given request across the system.",
+    },
+    pitfall: {
+      fr: "Le piège est de mettre en place le tracing sans propager correctement le contexte à travers les frontières asynchrones, comme un appel à un thread pool personnalisé ou un message Kafka : sans propagation explicite du contexte de trace, chaque service voit une trace qui commence de zéro, cassant la continuité qui fait tout l'intérêt du tracing distribué.",
+      en: "The trap is setting up tracing without correctly propagating the context across asynchronous boundaries, like a call to a custom thread pool or a Kafka message: without explicit trace context propagation, each service sees a trace that starts from scratch, breaking the continuity that's the whole point of distributed tracing.",
+    },
+    tags: ["observability", "micrometer", "distributed-tracing"],
+  },
+
+  // JPA & Hibernate (senior/architecte)
+  {
+    id: "jpa-batch-inserts-updates",
+    topicId: "jpa-hibernate",
+    difficulty: "hard",
+    question: {
+      fr: "Comment activer le batching des insertions Hibernate, et pourquoi la stratégie de génération d'identifiant IDENTITY l'empêche-t-elle de fonctionner ?",
+      en: "How do you enable Hibernate insert batching, and why does the IDENTITY id generation strategy prevent it from working ?",
+    },
+    answer: {
+      fr: "Le batching regroupe plusieurs instructions INSERT ou UPDATE en un seul aller-retour réseau vers la base, ce qui réduit fortement le temps passé en latence réseau lors d'opérations en masse, en activant hibernate.jdbc.batch_size et en insérant les entités par lots plutôt qu'une par une. Le problème est que la stratégie IDENTITY délègue la génération de l'identifiant à la base de données au moment même de l'insertion : Hibernate a besoin de connaître cet identifiant tout de suite après chaque insert pour le reste de son fonctionnement interne, ce qui l'oblige à exécuter chaque insertion individuellement pour récupérer l'identifiant généré, rendant le batching impossible. Les stratégies SEQUENCE ou TABLE, qui génèrent l'identifiant avant l'insertion, sont compatibles avec le batching.",
+      en: "Batching groups several INSERT or UPDATE statements into a single network round-trip to the database, which strongly reduces time spent on network latency during bulk operations, by enabling hibernate.jdbc.batch_size and inserting entities in batches rather than one at a time. The problem is that the IDENTITY strategy delegates identifier generation to the database at the exact moment of insertion: Hibernate needs to know that identifier right after each insert for the rest of its internal bookkeeping, forcing it to execute each insertion individually to retrieve the generated identifier, making batching impossible. The SEQUENCE or TABLE strategies, which generate the identifier before insertion, are compatible with batching.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est de configurer hibernate.jdbc.batch_size en pensant que ça suffit, sans réaliser que le choix de la stratégie de génération d'identifiant peut silencieusement annuler tout le bénéfice attendu : vérifier le SQL généré, ou activer les logs de batching, reste le seul moyen fiable de confirmer que le batching fonctionne réellement.",
+      en: "The classic interview trap is configuring hibernate.jdbc.batch_size and thinking that's enough, without realizing the id generation strategy choice can silently cancel the whole expected benefit: checking the generated SQL, or enabling batching logs, remains the only reliable way to confirm batching is actually happening.",
+    },
+    code: {
+      lang: "properties",
+      snippet:
+        "spring.jpa.properties.hibernate.jdbc.batch_size=50\nspring.jpa.properties.hibernate.order_inserts=true\nspring.jpa.properties.hibernate.order_updates=true\n# Incompatible avec le batching :\n# @GeneratedValue(strategy = GenerationType.IDENTITY)\n# Compatible :\n# @GeneratedValue(strategy = GenerationType.SEQUENCE)",
+    },
+    tags: ["batching", "performance", "id-generation"],
+  },
+  {
+    id: "jpa-second-level-cache-distributed",
+    topicId: "jpa-hibernate",
+    difficulty: "hard",
+    question: {
+      fr: "Quel problème spécifique pose le cache de second niveau d'Hibernate dans une application déployée sur plusieurs instances ?",
+      en: "What specific problem does Hibernate's second-level cache raise in an application deployed across multiple instances ?",
+    },
+    answer: {
+      fr: "Par défaut, chaque instance de l'application maintient son propre cache de second niveau en mémoire locale, sans aucune communication avec les caches des autres instances. Si une instance modifie une donnée en base, les autres instances continuent de servir la valeur périmée depuis leur propre cache jusqu'à expiration de sa durée de vie configurée, ce qui peut créer des incohérences visibles par les utilisateurs selon l'instance qui traite leur requête. La solution est d'utiliser un fournisseur de cache distribué, comme Hazelcast ou Infinispan, capable de propager les invalidations entre toutes les instances, ou d'accepter une durée de vie de cache suffisamment courte pour rendre l'incohérence temporaire tolérable au regard du besoin métier.",
+      en: "By default, each application instance maintains its own second-level cache in local memory, with no communication with other instances' caches. If one instance updates data in the database, other instances keep serving the stale value from their own cache until its configured time-to-live expires, which can create inconsistencies visible to users depending on which instance handles their request. The solution is using a distributed cache provider, like Hazelcast or Infinispan, able to propagate invalidations across every instance, or accepting a short enough cache time-to-live to make the temporary inconsistency tolerable given the business need.",
+    },
+    pitfall: {
+      fr: "Le piège est d'activer le cache de second niveau en environnement multi-instance sans avoir vérifié quel fournisseur de cache est réellement configuré derrière : un cache local par défaut comme EHCache en mode standalone donne une fausse impression de sécurité, alors qu'il n'offre aucune cohérence entre instances contrairement à un déploiement en cluster explicite.",
+      en: "The trap is enabling second-level cache in a multi-instance environment without checking which cache provider is actually configured behind it: a local default cache like EHCache in standalone mode gives a false sense of safety, since it offers no consistency across instances unlike an explicitly clustered deployment.",
+    },
+    tags: ["second-level-cache", "distributed-systems", "consistency"],
+  },
+  {
+    id: "jpa-dto-projections-performance",
+    topicId: "jpa-hibernate",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi préférer une projection DTO à une entité complète pour un endpoint de lecture seule, et comment l'écrire en JPQL ?",
+      en: "Why prefer a DTO projection over a full entity for a read-only endpoint, and how do you write one in JPQL ?",
+    },
+    answer: {
+      fr: "Charger une entité complète récupère toutes ses colonnes et active le suivi des modifications par le contexte de persistance, même quand seules deux ou trois valeurs sont réellement nécessaires pour la réponse, ce qui gaspille de la bande passante réseau, de la mémoire, et du travail de dirty checking inutile. Une projection DTO via une expression constructeur JPQL exécute une requête SQL qui ne sélectionne que les colonnes nécessaires et retourne directement des objets détachés, non gérés par le contexte de persistance, ce qui est nettement plus léger pour tout endpoint qui ne fait que lire et afficher de la donnée sans jamais la modifier.",
+      en: "Loading a full entity fetches every column and enables change tracking by the persistence context, even when only two or three values are actually needed for the response, which wastes network bandwidth, memory, and unnecessary dirty-checking work. A DTO projection via a JPQL constructor expression runs a SQL query that only selects the needed columns and directly returns detached objects, not managed by the persistence context, which is markedly lighter for any endpoint that only reads and displays data without ever modifying it.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser des projections DTO partout par réflexe de performance, y compris sur des écrans qui ont ensuite besoin de modifier et sauvegarder la même donnée : un DTO est détaché et ne peut pas être sauvegardé directement, il faudrait recharger une entité gérée pour toute opération d'écriture, ce qui peut annuler le gain si mal anticipé.",
+      en: "The trap is using DTO projections everywhere out of a performance reflex, including on screens that later need to modify and save that same data: a DTO is detached and can't be saved directly, a managed entity would need to be reloaded for any write operation, which can cancel the gain if not planned for.",
+    },
+    code: {
+      lang: "java",
+      snippet:
+        "public record OrderSummary(Long id, String customerName, BigDecimal total) {}\n\n@Query(\"\"\"\n  select new com.app.OrderSummary(o.id, o.customer.name, o.total)\n  from Order o where o.status = :status\n  \"\"\")\nList<OrderSummary> findSummariesByStatus(@Param(\"status\") OrderStatus status);",
+    },
+    tags: ["dto-projections", "performance", "jpql"],
+  },
+  {
+    id: "jpa-flush-modes",
+    topicId: "jpa-hibernate",
+    difficulty: "hard",
+    question: {
+      fr: "Que déclenche un flush du contexte de persistance, et quelle est la différence entre le mode AUTO et le mode COMMIT ?",
+      en: "What triggers a flush of the persistence context, and what is the difference between AUTO and COMMIT flush modes ?",
+    },
+    answer: {
+      fr: "Un flush synchronise les changements en attente dans le contexte de persistance, entités nouvelles, modifiées ou supprimées, vers la base de données en exécutant les instructions SQL correspondantes, sans pour autant valider la transaction. En mode AUTO, le mode par défaut, Hibernate déclenche un flush automatique avant l'exécution de toute requête JPQL ou Criteria, pour garantir que cette requête voit bien les changements en attente faits dans la même transaction. En mode COMMIT, le flush n'a lieu qu'au moment de la validation de la transaction, ce qui peut améliorer les performances en évitant des flushs intermédiaires, mais au prix du risque qu'une requête exécutée dans la transaction ne voie pas encore des changements pourtant déjà faits en mémoire.",
+      en: "A flush synchronizes pending changes in the persistence context, new, modified or deleted entities, to the database by executing the corresponding SQL statements, without committing the transaction. In AUTO mode, the default, Hibernate triggers an automatic flush before executing any JPQL or Criteria query, to guarantee that query sees pending changes made within the same transaction. In COMMIT mode, the flush only happens at transaction commit time, which can improve performance by avoiding intermediate flushes, but at the risk that a query executed within the transaction won't yet see changes already made in memory.",
+    },
+    pitfall: {
+      fr: "Le piège est de sous-estimer le coût du dirty checking automatique déclenché à chaque flush AUTO sur un contexte de persistance qui contient énormément d'entités chargées : Hibernate doit comparer l'état actuel de chaque entité gérée avec son instantané initial, ce qui peut devenir un vrai goulot d'étranglement dans une transaction qui charge et manipule un grand nombre d'objets.",
+      en: "The trap is underestimating the cost of the automatic dirty checking triggered on every AUTO flush when the persistence context holds a huge number of loaded entities: Hibernate has to compare each managed entity's current state against its initial snapshot, which can become a real bottleneck in a transaction that loads and manipulates a large number of objects.",
+    },
+    tags: ["flush-modes", "dirty-checking", "persistence-context"],
+  },
+  {
+    id: "jpa-multi-tenancy-strategies",
+    topicId: "jpa-hibernate",
+    difficulty: "hard",
+    question: {
+      fr: "Quelles sont les principales stratégies de multi-tenancy avec Hibernate, et quels sont leurs compromis ?",
+      en: "What are the main multi-tenancy strategies with Hibernate, and what are their trade-offs ?",
+    },
+    answer: {
+      fr: "La stratégie base de données séparée donne à chaque client sa propre base physique, l'isolation la plus forte possible mais aussi la plus coûteuse à opérer et à faire évoluer, chaque migration de schéma devant être répétée sur chaque base. La stratégie schéma séparé partage une seule base mais donne un schéma dédié par client, un compromis raisonnable entre isolation et coût opérationnel. La stratégie colonne discriminante partage à la fois la base et le schéma, avec une colonne tenant_id qui filtre chaque requête, la plus économique en ressources mais la plus risquée si un filtre est oublié quelque part, exposant potentiellement les données d'un client à un autre.",
+      en: "The separate database strategy gives each customer their own physical database, the strongest possible isolation but also the most costly to operate and evolve, every schema migration needing to be repeated on every database. The separate schema strategy shares a single database but gives a dedicated schema per customer, a reasonable trade-off between isolation and operational cost. The discriminator column strategy shares both the database and the schema, with a tenant_id column filtering every query, the cheapest in resources but the riskiest if a filter is forgotten somewhere, potentially exposing one customer's data to another.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de recommander la stratégie colonne discriminante sans mentionner son risque de sécurité majeur : oublier le filtre tenant_id sur une seule requête, ou sur un accès direct en base pour du débogage, peut exposer des données confidentielles entre clients, c'est pourquoi cette stratégie exige des garde-fous supplémentaires, comme des filtres Hibernate appliqués automatiquement au niveau de la session.",
+      en: "The interview trap is recommending the discriminator column strategy without mentioning its major security risk: forgetting the tenant_id filter on a single query, or on a direct database access for debugging, can expose confidential data across customers, which is why this strategy demands extra guardrails, like Hibernate filters automatically applied at the session level.",
+    },
+    tags: ["multi-tenancy", "architecture", "security"],
+  },
+
+  // SQL (senior/architecte)
+  {
+    id: "sql-execution-plan-reading",
+    topicId: "sql",
+    difficulty: "hard",
+    question: {
+      fr: "Comment lire un plan d'exécution pour diagnostiquer une requête lente, et quelle est la différence entre un seq scan et un index scan ?",
+      en: "How do you read an execution plan to diagnose a slow query, and what is the difference between a seq scan and an index scan ?",
+    },
+    answer: {
+      fr: "Un plan d'exécution, obtenu avec EXPLAIN ou EXPLAIN ANALYZE, décrit la stratégie choisie par l'optimiseur pour exécuter une requête, sous forme d'arbre d'opérations dont il faut lire les nœuds les plus internes en premier. Un seq scan, ou parcours séquentiel, lit la table entière ligne par ligne, ce qui est en réalité optimal quand une grande proportion des lignes correspond au filtre. Un index scan utilise une structure d'index pour sauter directement aux lignes pertinentes, bien plus rapide quand le filtre ne sélectionne qu'une petite fraction de la table. EXPLAIN ANALYZE exécute réellement la requête et ajoute le temps mesuré et le nombre de lignes réel à chaque étape, ce qui permet de repérer un écart entre l'estimation de l'optimiseur et la réalité, souvent le signe de statistiques obsolètes.",
+      en: "An execution plan, obtained with EXPLAIN or EXPLAIN ANALYZE, describes the strategy the optimizer chose to execute a query, as a tree of operations that should be read from the innermost nodes first. A seq scan, or sequential scan, reads the entire table row by row, which is actually optimal when a large proportion of rows match the filter. An index scan uses an index structure to jump directly to relevant rows, much faster when the filter only selects a small fraction of the table. EXPLAIN ANALYZE actually runs the query and adds the measured time and the real row count to each step, which lets you spot a gap between the optimizer's estimate and reality, often a sign of stale statistics.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est de croire qu'un seq scan est toujours le signe d'un problème de performance : sur une petite table, ou quand le filtre sélectionne la majorité des lignes, un seq scan est souvent plus rapide qu'un index scan à cause du surcoût de navigation dans la structure d'index, l'optimiseur fait généralement le bon choix, l'intervention manuelle ne devrait venir qu'après avoir constaté un vrai écart entre estimation et réalité.",
+      en: "The classic interview trap is believing a seq scan is always a sign of a performance problem: on a small table, or when the filter selects most of the rows, a seq scan is often faster than an index scan because of the overhead of navigating the index structure, the optimizer usually makes the right call, manual intervention should only come after observing a real gap between estimate and reality.",
+    },
+    code: {
+      lang: "sql",
+      snippet:
+        "EXPLAIN ANALYZE\nSELECT * FROM orders WHERE customer_id = 42;\n\n-- Index Scan using idx_orders_customer_id on orders\n--   (cost=0.29..8.31 rows=5 width=64)\n--   (actual time=0.02..0.03 rows=5 loops=1)",
+    },
+    tags: ["execution-plan", "index-scan", "performance-tuning"],
+  },
+  {
+    id: "sql-cte-recursive",
+    topicId: "sql",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne une CTE récursive, et pour quel type de problème est-elle particulièrement adaptée ?",
+      en: "How does a recursive CTE work, and what kind of problem is it particularly suited for ?",
+    },
+    answer: {
+      fr: "Une CTE récursive se définit en deux parties combinées par UNION ALL : un membre initial qui produit les lignes de départ, et un membre récursif qui référence la CTE elle-même pour produire les lignes suivantes à partir des précédentes, la récursion s'arrêtant naturellement quand le membre récursif ne produit plus aucune nouvelle ligne. C'est la solution naturelle pour parcourir une structure hiérarchique de profondeur variable stockée dans une seule table, comme une arborescence de catégories, un organigramme d'entreprise, ou une nomenclature de composants, là où une jointure classique ne peut gérer qu'un nombre fixe de niveaux.",
+      en: "A recursive CTE is defined in two parts combined by UNION ALL: an initial member that produces the starting rows, and a recursive member that references the CTE itself to produce the next rows from the previous ones, the recursion naturally stopping when the recursive member no longer produces any new row. It's the natural solution for traversing a hierarchical structure of variable depth stored in a single table, like a category tree, a company org chart, or a bill of materials, where a classic join can only handle a fixed number of levels.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier une condition d'arrêt correcte dans une hiérarchie qui contient un cycle, par exemple une donnée corrompue où un enregistrement finit par référencer un de ses propres descendants : sans protection, la CTE récursive peut boucler indéfiniment, la plupart des moteurs proposent une clause pour détecter les cycles ou limiter la profondeur maximale de récursion.",
+      en: "The trap is forgetting a correct stopping condition in a hierarchy that contains a cycle, for example corrupted data where a record ends up referencing one of its own descendants: without protection, the recursive CTE can loop indefinitely, most engines offer a clause to detect cycles or cap the maximum recursion depth.",
+    },
+    code: {
+      lang: "sql",
+      snippet:
+        "WITH RECURSIVE org_chart AS (\n  SELECT id, name, manager_id, 1 AS depth\n  FROM employees WHERE manager_id IS NULL\n  UNION ALL\n  SELECT e.id, e.name, e.manager_id, oc.depth + 1\n  FROM employees e\n  JOIN org_chart oc ON e.manager_id = oc.id\n)\nSELECT * FROM org_chart ORDER BY depth;",
+    },
+    tags: ["cte", "recursive-queries", "hierarchical-data"],
+  },
+  {
+    id: "sql-partitioning-strategies",
+    topicId: "sql",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que le partitionnement de table, et quand devient-il pertinent à grande échelle ?",
+      en: "What is table partitioning, and when does it become relevant at scale ?",
+    },
+    answer: {
+      fr: "Le partitionnement découpe physiquement une grande table en plusieurs sous-tables plus petites, appelées partitions, selon une clé, par plage de valeurs comme une date, par liste de valeurs discrètes, ou par hachage. Vu de l'application, la table reste unique, mais le moteur peut exclure entièrement les partitions non concernées par une requête, une technique appelée partition pruning, ce qui accélère considérablement les requêtes qui filtrent sur la clé de partitionnement. Ça devient pertinent quand une table atteint des dizaines ou centaines de millions de lignes et que les requêtes ciblent naturellement un sous-ensemble prévisible, par exemple les données d'un mois donné dans une table d'événements, ce qui permet aussi de purger de vieilles données en supprimant une partition entière plutôt qu'en exécutant un DELETE coûteux.",
+      en: "Partitioning physically splits a large table into several smaller sub-tables, called partitions, based on a key, by value range like a date, by list of discrete values, or by hash. From the application's point of view, the table remains a single one, but the engine can entirely skip partitions irrelevant to a query, a technique called partition pruning, which considerably speeds up queries that filter on the partitioning key. This becomes relevant when a table reaches tens or hundreds of millions of rows and queries naturally target a predictable subset, for example a given month's data in an events table, which also allows purging old data by dropping an entire partition rather than running a costly DELETE.",
+    },
+    pitfall: {
+      fr: "Le piège est de partitionner une table sur une clé qui ne correspond pas aux filtres réellement utilisés par les requêtes de l'application : sans filtre sur la clé de partitionnement, le moteur doit scanner toutes les partitions de toute façon, annulant le bénéfice du partition pruning tout en ajoutant de la complexité opérationnelle inutile.",
+      en: "The trap is partitioning a table on a key that doesn't match the filters actually used by the application's queries: without a filter on the partitioning key, the engine has to scan every partition anyway, canceling the partition pruning benefit while adding unnecessary operational complexity.",
+    },
+    tags: ["partitioning", "scalability", "database-design"],
+  },
+  {
+    id: "sql-mvcc-concurrency",
+    topicId: "sql",
+    difficulty: "hard",
+    question: {
+      fr: "Comment le contrôle de concurrence multi-versions (MVCC) permet-il à des lecteurs de ne jamais bloquer des écrivains ?",
+      en: "How does multi-version concurrency control (MVCC) let readers never block writers ?",
+    },
+    answer: {
+      fr: "Plutôt que de verrouiller une ligne pour empêcher toute lecture pendant qu'elle est modifiée, une base MVCC conserve plusieurs versions physiques de chaque ligne modifiée, chacune associée à l'identifiant de la transaction qui l'a créée. Quand une transaction lit une ligne, elle voit la version qui était valide au début de sa propre transaction ou de sa requête, selon le niveau d'isolation, sans jamais avoir besoin d'attendre qu'une écriture concurrente se termine. Les anciennes versions devenues inutiles, parce qu'aucune transaction active n'en a plus besoin, sont ensuite nettoyées par un processus de maintenance en arrière-plan, comme le VACUUM de PostgreSQL.",
+      en: "Rather than locking a row to prevent any read while it's being modified, an MVCC database keeps several physical versions of each modified row, each tied to the identifier of the transaction that created it. When a transaction reads a row, it sees the version that was valid at the start of its own transaction or its query, depending on the isolation level, without ever needing to wait for a concurrent write to finish. Old versions that become unnecessary, because no active transaction still needs them, are then cleaned up by a background maintenance process, like PostgreSQL's VACUUM.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que MVCC élimine les verrous de lecture mais pas les conflits d'écriture concurrente : deux transactions qui modifient la même ligne en même temps se heurtent toujours, et négliger la maintenance des anciennes versions, comme un VACUUM qui ne tourne jamais, peut faire gonfler la taille physique des tables et dégrader les performances avec le temps.",
+      en: "The trap is forgetting MVCC eliminates read locks but not concurrent write conflicts: two transactions modifying the same row at the same time still collide, and neglecting old version maintenance, like a VACUUM that never runs, can bloat tables' physical size and degrade performance over time.",
+    },
+    tags: ["mvcc", "concurrency", "database-internals"],
+  },
+  {
+    id: "sql-connection-pooling",
+    topicId: "sql",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi le pooling de connexions est-il indispensable, et pourquoi une taille de pool plus grande n'améliore-t-elle pas toujours les performances ?",
+      en: "Why is connection pooling essential, and why doesn't a larger pool size always improve performance ?",
+    },
+    answer: {
+      fr: "Ouvrir une nouvelle connexion à une base de données est une opération coûteuse, impliquant une négociation réseau et souvent une authentification, ce qui rendrait l'application inutilisable si chaque requête devait ouvrir puis fermer sa propre connexion. Un pool de connexions, comme HikariCP, maintient un ensemble de connexions déjà établies et prêtes à l'emploi, que les threads applicatifs empruntent puis rendent après usage. Contrairement à l'intuition, augmenter indéfiniment la taille du pool ne s'échelonne pas linéairement : la base de données elle-même a un nombre limité de cœurs pour traiter les requêtes en parallèle, et trop de connexions actives simultanément créent surtout plus de contention sur les ressources partagées de la base, comme les verrous ou le cache de pages, sans accélérer le débit réel.",
+      en: "Opening a new database connection is a costly operation, involving network negotiation and often authentication, which would make an application unusable if every query had to open and close its own connection. A connection pool, like HikariCP, maintains a set of already established, ready-to-use connections that application threads borrow and return after use. Counter-intuitively, endlessly increasing pool size doesn't scale linearly: the database itself has a limited number of cores to process queries in parallel, and too many simultaneously active connections mostly create more contention on the database's shared resources, like locks or the page cache, without speeding up actual throughput.",
+    },
+    pitfall: {
+      fr: "Le piège classique est de dimensionner le pool de connexions à la louche, souvent bien trop large, en pensant que plus de connexions veut dire plus de débit : la formule couramment recommandée pour HikariCP part du nombre de cœurs disponibles côté base, un pool surdimensionné dégrade souvent les performances au lieu de les améliorer.",
+      en: "The classic trap is sizing the connection pool by guesswork, often far too large, assuming more connections means more throughput: the commonly recommended formula for HikariCP starts from the number of cores available on the database side, an oversized pool often degrades performance instead of improving it.",
+    },
+    tags: ["connection-pooling", "hikaricp", "performance-tuning"],
+  },
+
+  // Angular (senior/architecte)
+  {
+    id: "angular-zoneless-change-detection",
+    topicId: "angular",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce qu'Angular zoneless, et en quoi les signals rendent-ils Zone.js obsolète pour la détection de changements ?",
+      en: "What is zoneless Angular, and how do signals make Zone.js obsolete for change detection ?",
+    },
+    answer: {
+      fr: "Zone.js déclenche un cycle de détection de changements en interceptant tous les événements asynchrones possibles du navigateur, une approche large mais coûteuse puisqu'elle vérifie l'ensemble de l'arbre de composants même quand une seule petite partie a réellement changé. Les signals, eux, savent précisément quels composants ou quelles expressions du template dépendent de leur valeur, puisque cette dépendance est déclarée explicitement à la lecture du signal. Angular zoneless retire complètement Zone.js et s'appuie uniquement sur ce graphe de dépendances fin des signals pour ne recalculer que ce qui a réellement besoin de l'être, ce qui réduit le travail de détection de changements et supprime le poids de Zone.js dans le bundle final.",
+      en: "Zone.js triggers a change detection cycle by intercepting every possible asynchronous browser event, a broad but costly approach since it checks the entire component tree even when only one small part actually changed. Signals, on the other hand, precisely know which components or template expressions depend on their value, since that dependency is explicitly declared when the signal is read. Zoneless Angular removes Zone.js entirely and relies solely on that fine-grained signal dependency graph to only recompute what genuinely needs it, which reduces change detection work and removes Zone.js's weight from the final bundle.",
+    },
+    pitfall: {
+      fr: "Le piège est de migrer vers le mode zoneless sans avoir remplacé toutes les propriétés de composant classiques par des signals : une propriété mutée directement sans passer par un signal n'a plus aucun mécanisme pour déclencher une mise à jour du template en l'absence de Zone.js, ce qui casse silencieusement l'affichage plutôt que de lever une erreur explicite.",
+      en: "The trap is migrating to zoneless mode without having replaced every classic component property with signals: a property mutated directly without going through a signal no longer has any mechanism to trigger a template update once Zone.js is gone, which silently breaks the display rather than throwing an explicit error.",
+    },
+    tags: ["zoneless", "signals", "change-detection"],
+  },
+  {
+    id: "angular-ssr-hydration",
+    topicId: "angular",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne l'hydratation d'une application Angular Universal, et qu'est-ce qu'une erreur d'hydratation ?",
+      en: "How does hydration work for an Angular Universal application, and what is a hydration mismatch ?",
+    },
+    answer: {
+      fr: "Le rendu côté serveur, Angular Universal, génère le HTML complet d'une page sur le serveur pour l'envoyer déjà prêt au navigateur, améliorant le temps de premier affichage et le référencement. L'hydratation est l'étape qui suit côté client : plutôt que de jeter ce HTML et de tout re-rendre depuis zéro, Angular réutilise le DOM déjà présent et y attache les écouteurs d'événements et l'état applicatif nécessaires pour le rendre interactif, sans flash de contenu ni re-rendu visible. Une erreur d'hydratation survient quand le DOM effectivement rendu côté client, si Angular devait le regénérer, ne correspond pas exactement au DOM produit côté serveur, souvent à cause de code qui donne un résultat différent selon qu'il tourne sur le serveur ou dans le navigateur, comme un accès direct à window ou à la date courante.",
+      en: "Server-side rendering, Angular Universal, generates a page's full HTML on the server to send it already ready to the browser, improving first paint time and SEO. Hydration is the step that follows on the client: rather than discarding that HTML and re-rendering everything from scratch, Angular reuses the DOM already present and attaches the event listeners and application state needed to make it interactive, with no content flash or visible re-render. A hydration mismatch happens when the DOM that would actually be rendered client-side, if Angular had to regenerate it, doesn't exactly match the DOM produced server-side, often because of code that gives a different result depending on whether it runs on the server or in the browser, like a direct access to window or the current date.",
+    },
+    pitfall: {
+      fr: "Le piège classique est d'accéder directement à des API du navigateur, comme window ou localStorage, dans du code qui s'exécute aussi côté serveur pendant le SSR : ça provoque une erreur au moment du rendu serveur ou une incohérence d'hydratation, la bonne pratique est de vérifier la plateforme d'exécution ou d'isoler ce code dans un hook de cycle de vie qui ne s'exécute que côté client.",
+      en: "The classic trap is directly accessing browser APIs, like window or localStorage, in code that also runs server-side during SSR: it causes a server-render error or a hydration mismatch, the right practice is checking the execution platform or isolating that code in a lifecycle hook that only runs client-side.",
+    },
+    tags: ["ssr", "hydration", "angular-universal"],
+  },
+  {
+    id: "angular-module-federation-microfrontends",
+    topicId: "angular",
+    difficulty: "hard",
+    question: {
+      fr: "Comment Module Federation permet-il de construire des micro-frontends Angular indépendamment déployables ?",
+      en: "How does Module Federation enable independently deployable Angular micro-frontends ?",
+    },
+    answer: {
+      fr: "Module Federation, une fonctionnalité de Webpack, permet à une application Angular de charger dynamiquement à l'exécution du code JavaScript compilé et déployé séparément par une autre équipe, plutôt que de tout compiler ensemble dans un seul bundle monolithique au moment du build. Une application hôte déclare quels modules distants elle peut consommer et à quelle adresse les trouver, tandis que chaque micro-frontend expose les modules qu'il souhaite partager. Ça permet à plusieurs équipes de développer, tester et déployer leur partie de l'application indépendamment, avec des cycles de release découplés, tout en partageant certaines dépendances communes, comme Angular lui-même, pour éviter de les charger plusieurs fois.",
+      en: "Module Federation, a Webpack feature, lets an Angular application dynamically load, at runtime, JavaScript code compiled and deployed separately by another team, rather than compiling everything together into a single monolithic bundle at build time. A host application declares which remote modules it can consume and where to find them, while each micro-frontend exposes the modules it wants to share. This lets several teams develop, test and deploy their part of the application independently, with decoupled release cycles, while sharing certain common dependencies, like Angular itself, to avoid loading them multiple times.",
+    },
+    pitfall: {
+      fr: "Le piège est de sous-estimer la gestion des versions de dépendances partagées entre micro-frontends indépendants : si deux équipes déploient des versions incompatibles d'une même librairie partagée, comme deux versions majeures d'Angular différentes, l'application peut charger la mauvaise version au runtime ou planter de façon difficile à diagnostiquer, une vraie gouvernance de versionnage devient nécessaire dès que plusieurs équipes sont impliquées.",
+      en: "The trap is underestimating shared dependency version management across independent micro-frontends: if two teams deploy incompatible versions of the same shared library, like two different Angular major versions, the application can load the wrong version at runtime or crash in a way that's hard to diagnose, real versioning governance becomes necessary as soon as several teams are involved.",
+    },
+    tags: ["micro-frontends", "module-federation", "architecture"],
+  },
+  {
+    id: "angular-http-interceptors-chain",
+    topicId: "angular",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne une chaîne d'intercepteurs HTTP fonctionnels en Angular, et dans quel ordre s'exécutent-ils ?",
+      en: "How does a chain of functional HTTP interceptors work in Angular, and in what order do they execute ?",
+    },
+    answer: {
+      fr: "Un intercepteur HTTP fonctionnel est une fonction qui reçoit la requête sortante et une fonction next représentant la suite de la chaîne, ce qui lui permet de modifier la requête avant de la transmettre, de transformer la réponse après l'avoir reçue de next, ou de court-circuiter complètement la chaîne, par exemple pour renvoyer une réponse en cache sans jamais appeler le serveur. Les intercepteurs déclarés s'exécutent dans l'ordre où ils sont fournis pour la partie requête, du premier au dernier, puis dans l'ordre inverse pour la partie réponse, chaque intercepteur pouvant observer et transformer ce que les suivants dans la chaîne renvoient.",
+      en: "A functional HTTP interceptor is a function that receives the outgoing request and a next function representing the rest of the chain, letting it modify the request before forwarding it, transform the response after receiving it from next, or completely short-circuit the chain, for example to return a cached response without ever calling the server. Declared interceptors run in the order they're provided for the request side, first to last, then in reverse order for the response side, each interceptor able to observe and transform what the next ones in the chain return.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier qu'un intercepteur qui gère l'authentification et tente de rafraîchir un token expiré doit gérer le cas où plusieurs requêtes échouent simultanément avec un token expiré : sans mécanisme pour partager un seul rafraîchissement en cours entre toutes ces requêtes, l'application peut déclencher plusieurs appels de rafraîchissement concurrents inutiles, voire invalider mutuellement les tokens obtenus.",
+      en: "The trap is forgetting that an interceptor handling authentication and trying to refresh an expired token must handle the case where several requests fail simultaneously with an expired token: without a mechanism to share a single in-flight refresh across all those requests, the application can trigger several unnecessary concurrent refresh calls, or even have the obtained tokens invalidate each other.",
+    },
+    code: {
+      lang: "typescript",
+      snippet:
+        "export const authInterceptor: HttpInterceptorFn = (req, next) => {\n  const token = inject(AuthService).getToken();\n  const authReq = token\n    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })\n    : req;\n  return next(authReq);\n};\n\n// providers: [provideHttpClient(withInterceptors([authInterceptor]))]",
+    },
+    tags: ["http-interceptors", "functional-interceptors", "authentication"],
+  },
+  {
+    id: "angular-performance-budgets",
+    topicId: "angular",
+    difficulty: "hard",
+    question: {
+      fr: "À quoi servent les budgets de performance dans angular.json, et comment une stratégie de préchargement (preloading) complète-t-elle le lazy loading ?",
+      en: "What are performance budgets in angular.json for, and how does a preloading strategy complement lazy loading ?",
+    },
+    answer: {
+      fr: "Les budgets de performance définissent des seuils de taille, par exemple pour le bundle initial ou pour un composant donné, et font échouer le build ou lèvent un avertissement si un seuil est dépassé, ce qui empêche une régression de taille de passer inaperçue au fil des évolutions du projet. Le lazy loading découpe l'application en modules chargés seulement quand l'utilisateur navigue vers la route correspondante, ce qui réduit le bundle initial mais peut introduire un délai visible au premier accès à une route. Une stratégie de préchargement, comme PreloadAllModules ou une stratégie personnalisée basée sur la probabilité de navigation, charge ces modules lazy en arrière-plan une fois l'application initiale prête, pour qu'ils soient déjà disponibles quand l'utilisateur y accède réellement.",
+      en: "Performance budgets define size thresholds, for example for the initial bundle or for a given component, and fail the build or raise a warning if a threshold is exceeded, which prevents a size regression from going unnoticed as the project evolves. Lazy loading splits the application into modules loaded only when the user navigates to the matching route, which reduces the initial bundle but can introduce a visible delay on first access to a route. A preloading strategy, like PreloadAllModules or a custom strategy based on navigation probability, loads those lazy modules in the background once the initial application is ready, so they're already available by the time the user actually reaches them.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser PreloadAllModules sans réflexion sur une application avec de nombreux modules lourds et rarement visités : ça revient à annuler une bonne partie du bénéfice du lazy loading en téléchargeant quand même tout le code en arrière-plan, une stratégie de préchargement personnalisée et sélective est souvent préférable à grande échelle.",
+      en: "The trap is using PreloadAllModules without thought on an application with many heavy, rarely visited modules: that ends up canceling much of lazy loading's benefit by downloading all the code in the background anyway, a custom, selective preloading strategy is often preferable at scale.",
+    },
+    code: {
+      lang: "json",
+      snippet:
+        '{\n  "budgets": [\n    { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },\n    { "type": "anyComponentStyle", "maximumWarning": "4kb" }\n  ]\n}',
+    },
+    tags: ["performance-budgets", "lazy-loading", "preloading"],
+  },
+
+  // Claude & LLM (senior/architecte)
+  {
+    id: "claude-mcp-protocol",
+    topicId: "claude",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que le Model Context Protocol (MCP), et quel problème standardise-t-il pour les applications basées sur des LLM ?",
+      en: "What is the Model Context Protocol (MCP), and what problem does it standardize for LLM-based applications ?",
+    },
+    answer: {
+      fr: "Avant MCP, chaque application qui voulait connecter un LLM à une source de données ou à un outil externe, une base de données, un système de fichiers, une API tierce, devait écrire une intégration spécifique et non réutilisable pour ce cas précis. MCP définit un protocole standard client-serveur qui décrit comment un serveur expose des outils, des ressources et des prompts de façon uniforme, et comment n'importe quel client compatible, comme Claude Desktop ou Claude Code, peut découvrir et utiliser ces capacités sans intégration sur mesure. C'est l'équivalent, pour les applications LLM, de ce que le Language Server Protocol a apporté aux éditeurs de code : un seul serveur MCP écrit une fois peut être réutilisé par n'importe quel client qui parle le protocole.",
+      en: "Before MCP, every application wanting to connect an LLM to a data source or an external tool, a database, a filesystem, a third-party API, had to write a specific, non-reusable integration for that exact case. MCP defines a standard client-server protocol describing how a server uniformly exposes tools, resources and prompts, and how any compatible client, like Claude Desktop or Claude Code, can discover and use those capabilities with no custom integration. It's the equivalent, for LLM applications, of what the Language Server Protocol brought to code editors: a single MCP server written once can be reused by any client that speaks the protocol.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter un serveur MCP comme une simple API REST déguisée : la valeur du protocole vient justement de sa capacité à décrire dynamiquement au client quels outils et ressources sont disponibles et comment les utiliser, plutôt que de coder en dur cette connaissance côté client, ce qui permet au même client de fonctionner avec des serveurs MCP totalement différents sans modification.",
+      en: "The trap is treating an MCP server as just a disguised REST API: the protocol's value comes precisely from its ability to dynamically describe to the client which tools and resources are available and how to use them, rather than hardcoding that knowledge client-side, which lets the same client work with completely different MCP servers with no modification.",
+    },
+    tags: ["mcp", "protocol-design", "agent-architecture"],
+  },
+  {
+    id: "claude-subagent-architecture",
+    topicId: "claude",
+    difficulty: "hard",
+    question: {
+      fr: "Quand a-t-on intérêt à déléguer une tâche à un subagent plutôt que de la traiter directement dans la boucle principale d'un agent ?",
+      en: "When does it make sense to delegate a task to a subagent rather than handling it directly in an agent's main loop ?",
+    },
+    answer: {
+      fr: "Un subagent démarre avec un contexte propre et isolé, sans l'historique de la conversation principale, ce qui convient bien à une tâche de recherche ou d'exploration dont le résultat final compte, mais dont les nombreuses étapes intermédiaires n'ont pas besoin de polluer le contexte de l'agent principal. Déléguer permet aussi de paralléliser plusieurs tâches indépendantes, chaque subagent travaillant de son côté, et de limiter le rayon d'action d'une tâche risquée en lui donnant un accès plus restreint aux outils que l'agent principal. À l'inverse, une tâche qui a besoin de tout le contexte déjà accumulé dans la conversation, ou qui est trop simple pour justifier le coût de démarrage d'un nouveau contexte, se traite mieux directement en ligne.",
+      en: "A subagent starts with a clean, isolated context, without the main conversation's history, which fits well for a research or exploration task whose final result matters, but whose many intermediate steps don't need to clutter the main agent's context. Delegating also allows parallelizing several independent tasks, each subagent working on its own, and limiting a risky task's blast radius by giving it more restricted tool access than the main agent. Conversely, a task that needs all the context already accumulated in the conversation, or that's too simple to justify the cost of starting a new context, is better handled directly inline.",
+    },
+    pitfall: {
+      fr: "Le piège est de déléguer systématiquement par réflexe, y compris pour des tâches triviales : chaque subagent a un coût de démarrage et perd l'accès direct au contexte déjà établi, sur-déléguer peut rendre le système plus lent et plus difficile à suivre qu'un traitement direct, la délégation doit rester une décision motivée par un besoin réel d'isolation ou de parallélisation.",
+      en: "The trap is delegating out of reflex for everything, including trivial tasks: every subagent has a startup cost and loses direct access to already established context, over-delegating can make the system slower and harder to follow than direct handling, delegation should remain a decision motivated by a real need for isolation or parallelization.",
+    },
+    tags: ["subagents", "agent-architecture", "orchestration"],
+  },
+  {
+    id: "claude-evals-and-regression-testing",
+    topicId: "claude",
+    difficulty: "hard",
+    question: {
+      fr: "Comment construire des evals pour tester une fonctionnalité basée sur un LLM, et pourquoi les tests unitaires classiques ne suffisent-ils pas ?",
+      en: "How do you build evals to test an LLM-powered feature, and why aren't classic unit tests enough ?",
+    },
+    answer: {
+      fr: "Un test unitaire classique vérifie qu'une même entrée produit toujours exactement la même sortie, une hypothèse qui ne tient pas pour un LLM dont les réponses varient en formulation même à comportement correct. Un eval compare plutôt la sortie du modèle contre un ensemble de critères de qualité, comme la présence d'informations attendues, l'absence d'un comportement interdit, ou un score attribué par un modèle juge qui évalue la réponse selon une grille définie, sur un jeu de cas représentatifs constitué à l'avance. L'objectif est de détecter une régression de comportement après un changement de prompt ou de modèle, pas de vérifier une égalité stricte de texte.",
+      en: "A classic unit test checks that the same input always produces exactly the same output, an assumption that doesn't hold for an LLM whose responses vary in phrasing even with correct behavior. An eval instead compares the model's output against a set of quality criteria, like the presence of expected information, the absence of a forbidden behavior, or a score assigned by a judge model that evaluates the response against a defined rubric, over a set of representative cases built in advance. The goal is to detect a behavior regression after a prompt or model change, not to check strict text equality.",
+    },
+    pitfall: {
+      fr: "Le piège est de construire un jeu d'evals une seule fois puis de ne jamais le faire évoluer : à mesure que de nouveaux cas limites sont découverts en production, ne pas les ajouter au jeu d'evals fait qu'on continue de tester contre un périmètre qui ne reflète plus les vrais usages, un jeu d'evals doit être un actif vivant, pas un artefact figé créé une seule fois.",
+      en: "The trap is building an eval set once and never evolving it: as new edge cases are discovered in production, not adding them to the eval set means continuing to test against a scope that no longer reflects real usage, an eval set should be a living asset, not a frozen artifact created once.",
+    },
+    tags: ["evals", "testing", "llm-quality"],
+  },
+  {
+    id: "claude-context-caching-cost",
+    topicId: "claude",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionne le cache de prompt, et dans quel scénario apporte-t-il le plus de bénéfice en coût et en latence ?",
+      en: "How does prompt caching work, and in what scenario does it bring the most benefit in cost and latency ?",
+    },
+    answer: {
+      fr: "Le cache de prompt permet de réutiliser le traitement déjà fait par le modèle sur une portion stable et répétée du prompt, comme un long system prompt, un jeu d'exemples, ou un gros document de référence, plutôt que de retraiter cette portion identique à chaque nouvel appel. Tant que cette portion reste inchangée d'un appel à l'autre et que les appels arrivent dans une fenêtre de temps suffisamment rapprochée, les appels suivants bénéficient d'un coût et d'une latence largement réduits sur cette partie mise en cache. C'est particulièrement rentable pour un agent qui réutilise le même contexte volumineux, comme une base de code entière ou une longue documentation, sur de nombreux appels successifs dans une même session.",
+      en: "Prompt caching lets you reuse processing the model already did on a stable, repeated portion of the prompt, like a long system prompt, a set of examples, or a large reference document, rather than reprocessing that identical portion on every new call. As long as that portion stays unchanged from one call to the next and calls arrive within a close enough time window, subsequent calls benefit from largely reduced cost and latency on that cached part. It's particularly worthwhile for an agent that reuses the same large context, like an entire codebase or lengthy documentation, across many successive calls within the same session.",
+    },
+    pitfall: {
+      fr: "Le piège est de placer le contenu qui change à chaque appel, comme la question spécifique de l'utilisateur, avant la portion stable dans l'ordre du prompt : le cache ne profite qu'au préfixe commun et identique d'un appel à l'autre, si l'ordre mélange contenu variable et contenu stable, aucune portion utile ne reste identique assez longtemps pour bénéficier du cache.",
+      en: "The trap is placing content that changes on every call, like the user's specific question, before the stable portion in the prompt's order: the cache only benefits the common, identical prefix from one call to the next, if the ordering mixes variable and stable content, no useful portion stays identical long enough to benefit from caching.",
+    },
+    tags: ["prompt-caching", "cost-optimization", "latency"],
+  },
+  {
+    id: "claude-guardrails-vs-fine-tuning",
+    topicId: "claude",
+    difficulty: "hard",
+    question: {
+      fr: "Pour un comportement critique en matière de sécurité, quand privilégier des garde-fous applicatifs plutôt qu'un fine-tuning du modèle ?",
+      en: "For a safety-critical behavior, when should you favor application-level guardrails over fine-tuning the model ?",
+    },
+    answer: {
+      fr: "Un garde-fou applicatif, comme une validation stricte des entrées et sorties, une liste blanche d'actions autorisées, ou une vérification déterministe après génération, offre une garantie vérifiable et modifiable rapidement sans avoir à réentraîner quoi que ce soit. Le fine-tuning modifie le comportement du modèle lui-même, ce qui peut sembler séduisant pour ancrer un comportement plus profondément, mais reste probabiliste par nature : rien ne garantit à 100% qu'un modèle affiné respecte toujours la règle visée, surtout face à une entrée inhabituelle non représentée dans les données d'entraînement. Pour un comportement réellement critique, la bonne pratique est de placer la garantie dure du côté du code déterministe, et de réserver le modèle, éventuellement affiné, à la partie où un jugement plus souple est acceptable.",
+      en: "An application-level guardrail, like strict input and output validation, an allowlist of permitted actions, or a deterministic check after generation, offers a verifiable guarantee that can be modified quickly with no need to retrain anything. Fine-tuning changes the model's own behavior, which can seem appealing for anchoring a behavior more deeply, but remains probabilistic by nature: nothing guarantees 100% that a fine-tuned model always follows the intended rule, especially facing an unusual input not represented in the training data. For a genuinely critical behavior, the right practice is placing the hard guarantee on the deterministic code side, and reserving the model, possibly fine-tuned, for the part where more flexible judgment is acceptable.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter le fine-tuning comme une solution de sécurité en soi : un modèle affiné pour refuser certaines demandes reste un modèle probabiliste, un attaquant suffisamment motivé peut souvent trouver une formulation qui contourne le comportement appris, la sécurité réelle doit reposer sur des couches déterministes qui ne dépendent pas du bon vouloir du modèle.",
+      en: "The interview trap is presenting fine-tuning as a security solution in itself: a model fine-tuned to refuse certain requests remains a probabilistic model, a sufficiently motivated attacker can often find a phrasing that bypasses the learned behavior, real security must rest on deterministic layers that don't depend on the model's goodwill.",
+    },
+    tags: ["guardrails", "fine-tuning", "ai-safety"],
+  },
+
+  // Kubernetes (senior/architecte)
+  {
+    id: "k8s-pod-disruption-budgets",
+    topicId: "kubernetes",
+    difficulty: "hard",
+    question: {
+      fr: "À quoi sert un PodDisruptionBudget, et en quoi diffère-t-il de la protection apportée par les probes ?",
+      en: "What is a PodDisruptionBudget for, and how does it differ from the protection probes provide ?",
+    },
+    answer: {
+      fr: "Un PodDisruptionBudget définit le nombre minimum de Pods d'une application qui doivent rester disponibles, ou le nombre maximum qui peuvent être indisponibles, lors d'une interruption volontaire déclenchée par un administrateur du cluster, comme le drainage d'un nœud pour maintenance ou une mise à jour de la version de Kubernetes. Contrairement aux probes, qui protègent contre des pannes de l'application elle-même en la retirant du trafic ou en la redémarrant, le PodDisruptionBudget protège contre des opérations d'infrastructure planifiées, en empêchant l'outil qui orchestre le drainage de retirer trop de Pods d'une même application en même temps, ce qui garantit une continuité de service minimale pendant les opérations de maintenance du cluster.",
+      en: "A PodDisruptionBudget defines the minimum number of an application's Pods that must remain available, or the maximum number that can be unavailable, during a voluntary disruption triggered by a cluster administrator, like draining a node for maintenance or upgrading the Kubernetes version. Unlike probes, which protect against failures of the application itself by removing it from traffic or restarting it, a PodDisruptionBudget protects against planned infrastructure operations, by preventing the tool orchestrating the drain from removing too many Pods of the same application at once, guaranteeing minimal service continuity during cluster maintenance operations.",
+    },
+    pitfall: {
+      fr: "Le piège est de définir un PodDisruptionBudget trop strict, comme minAvailable égal au nombre total de répliques, sur une application qui n'a que deux ou trois instances : ça peut bloquer indéfiniment un drainage de nœud légitime, car Kubernetes refusera de supprimer un seul Pod tant que la condition du budget ne peut pas être respectée, immobilisant potentiellement une opération de maintenance critique.",
+      en: "The trap is defining a PodDisruptionBudget too strictly, like minAvailable equal to the total replica count, on an application with only two or three instances: it can indefinitely block a legitimate node drain, since Kubernetes will refuse to remove even one Pod as long as the budget's condition can't be met, potentially stalling a critical maintenance operation.",
+    },
+    code: {
+      lang: "yaml",
+      snippet:
+        "apiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata:\n  name: api-pdb\nspec:\n  minAvailable: 2\n  selector:\n    matchLabels:\n      app: api",
+    },
+    tags: ["pod-disruption-budget", "cluster-operations", "resilience"],
+  },
+  {
+    id: "k8s-network-policies",
+    topicId: "kubernetes",
+    difficulty: "hard",
+    question: {
+      fr: "Comment une NetworkPolicy met-elle en place une approche zero-trust entre Pods, et que se passe-t-il par défaut sans aucune policy ?",
+      en: "How does a NetworkPolicy implement a zero-trust approach between Pods, and what happens by default with no policy at all ?",
+    },
+    answer: {
+      fr: "Par défaut, sans aucune NetworkPolicy, tous les Pods d'un cluster Kubernetes peuvent communiquer librement entre eux, quel que soit le namespace, un modèle ouvert qui ne convient pas à une architecture qui a besoin d'isoler ses services. Une NetworkPolicy sélectionne un ensemble de Pods via des labels et définit des règles d'entrée et de sortie explicites, en général en s'appuyant sur le principe zero-trust : dès qu'une NetworkPolicy s'applique à un Pod, tout le trafic non explicitement autorisé par une règle est refusé par défaut, ce qui inverse le modèle ouvert initial en modèle fermé par défaut, où chaque flux de communication doit être explicitement justifié.",
+      en: "By default, with no NetworkPolicy at all, every Pod in a Kubernetes cluster can freely communicate with every other, regardless of namespace, an open model that doesn't fit an architecture needing to isolate its services. A NetworkPolicy selects a set of Pods via labels and defines explicit ingress and egress rules, generally following the zero-trust principle: as soon as a NetworkPolicy applies to a Pod, all traffic not explicitly allowed by a rule is denied by default, flipping the initial open model into a default-closed one, where every communication flow must be explicitly justified.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que les NetworkPolicy fonctionnent automatiquement sur n'importe quel cluster : elles ne sont appliquées que si le plugin réseau (CNI) utilisé les implémente réellement, certains plugins réseau basiques les ignorent silencieusement, donnant une fausse impression de sécurité si on ne vérifie pas la compatibilité du CNI en place.",
+      en: "The trap is assuming NetworkPolicies work automatically on any cluster: they're only enforced if the network plugin (CNI) in use actually implements them, some basic network plugins silently ignore them, giving a false sense of security if the CNI's compatibility isn't checked.",
+    },
+    code: {
+      lang: "yaml",
+      snippet:
+        "apiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: deny-all-then-allow-db\nspec:\n  podSelector:\n    matchLabels: { app: database }\n  policyTypes: [Ingress]\n  ingress:\n    - from:\n        - podSelector:\n            matchLabels: { app: backend }\n      ports:\n        - port: 5432",
+    },
+    tags: ["network-policy", "zero-trust", "security"],
+  },
+  {
+    id: "k8s-operator-pattern",
+    topicId: "kubernetes",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que le pattern Operator dans Kubernetes, et comment une boucle de réconciliation fonctionne-t-elle ?",
+      en: "What is the Operator pattern in Kubernetes, and how does a reconciliation loop work ?",
+    },
+    answer: {
+      fr: "Un Operator encode la connaissance opérationnelle nécessaire pour gérer une application complexe, souvent avec état, comme une base de données répliquée, en étendant l'API Kubernetes avec une nouvelle ressource personnalisée, une CRD, qui décrit l'état désiré de cette application à un niveau d'abstraction métier plutôt qu'au niveau bas des Pods et Services. Le contrôleur associé exécute en continu une boucle de réconciliation : il observe l'état réel actuel, le compare à l'état désiré décrit dans la ressource personnalisée, et prend les actions nécessaires pour rapprocher l'un de l'autre, comme créer une nouvelle réplique après une panne ou orchestrer une mise à jour de version en respectant un ordre précis.",
+      en: "An Operator encodes the operational knowledge needed to manage a complex, often stateful application, like a replicated database, by extending the Kubernetes API with a new custom resource, a CRD, that describes that application's desired state at a business-level abstraction rather than at the low level of Pods and Services. The associated controller continuously runs a reconciliation loop: it observes the current actual state, compares it to the desired state described in the custom resource, and takes the necessary actions to bring the two closer together, like creating a new replica after a failure or orchestrating a version upgrade while respecting a precise order.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'un Operator élimine tout risque opérationnel simplement parce qu'il automatise des tâches auparavant manuelles : un Operator mal écrit peut lui-même introduire des bugs subtils dans sa logique de réconciliation, comme une boucle qui ne converge jamais vers l'état désiré dans certains cas limites, la qualité de l'Operator devient elle-même une dépendance critique de l'application qu'il gère.",
+      en: "The trap is believing an Operator eliminates all operational risk simply because it automates previously manual tasks: a poorly written Operator can itself introduce subtle bugs in its reconciliation logic, like a loop that never converges to the desired state in certain edge cases, the Operator's quality itself becomes a critical dependency of the application it manages.",
+    },
+    tags: ["operator-pattern", "crd", "reconciliation-loop"],
+  },
+  {
+    id: "k8s-multi-cluster-strategies",
+    topicId: "kubernetes",
+    difficulty: "hard",
+    question: {
+      fr: "Pour quelles raisons une organisation opte-t-elle pour plusieurs clusters Kubernetes plutôt qu'un seul grand cluster ?",
+      en: "For what reasons does an organization choose multiple Kubernetes clusters rather than one large cluster ?",
+    },
+    answer: {
+      fr: "Plusieurs clusters permettent une isolation forte entre environnements, comme production et hors-production, ou entre équipes, réduisant l'impact d'une mauvaise configuration ou d'une panne à un seul cluster plutôt qu'à l'ensemble du système. Ça permet aussi de répondre à des contraintes de localisation géographique des données ou de latence, en ayant un cluster par région proche des utilisateurs, et de limiter le rayon d'explosion d'une panne du plan de contrôle Kubernetes lui-même, qui affecterait sinon absolument toutes les charges de travail d'un seul coup. Le prix à payer est une complexité opérationnelle supplémentaire : gérer la cohérence de configuration, le déploiement coordonné et parfois le routage du trafic entre plusieurs clusters demande des outils et des processus dédiés.",
+      en: "Multiple clusters allow strong isolation between environments, like production and non-production, or between teams, reducing the impact of a misconfiguration or an outage to a single cluster rather than the whole system. It also lets you address data geographic location or latency constraints, with one cluster per region close to users, and limits the blast radius of an outage of the Kubernetes control plane itself, which would otherwise affect absolutely every workload at once. The price to pay is added operational complexity: managing configuration consistency, coordinated deployment and sometimes traffic routing across multiple clusters requires dedicated tools and processes.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter le multi-cluster comme toujours supérieur pour la résilience sans mentionner son coût opérationnel réel : une petite équipe qui peine déjà à bien opérer un seul cluster va souvent aggraver sa situation en en ajoutant un deuxième, la bonne réponse dépend de la maturité opérationnelle de l'équipe, pas seulement des bénéfices théoriques.",
+      en: "The interview trap is presenting multi-cluster as always superior for resilience without mentioning its real operational cost: a small team already struggling to properly operate one cluster will often worsen its situation by adding a second, the right answer depends on the team's operational maturity, not just theoretical benefits.",
+    },
+    tags: ["multi-cluster", "architecture", "operational-maturity"],
+  },
+  {
+    id: "k8s-init-containers-sidecars",
+    topicId: "kubernetes",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre un init container et un conteneur sidecar, et pour quels cas d'usage chacun est-il adapté ?",
+      en: "What is the difference between an init container and a sidecar container, and what use cases fit each one ?",
+    },
+    answer: {
+      fr: "Un init container s'exécute avant les conteneurs principaux du Pod et doit terminer avec succès avant qu'ils ne démarrent, ce qui convient à une tâche de préparation ponctuelle, comme attendre qu'une dépendance externe soit disponible ou initialiser des données dans un volume partagé. Un conteneur sidecar tourne en parallèle du conteneur principal pendant toute la durée de vie du Pod, ce qui convient à une fonctionnalité continue qui accompagne l'application, comme un proxy de service mesh qui intercepte tout le trafic réseau, ou un agent qui collecte et transmet les logs en continu. Depuis Kubernetes 1.28, les sidecars peuvent être déclarés comme un type particulier d'init container avec restartPolicy Always, ce qui leur donne un ordre de démarrage et d'arrêt bien défini par rapport au conteneur principal.",
+      en: "An init container runs before the Pod's main containers and must complete successfully before they start, which fits a one-off preparation task, like waiting for an external dependency to become available or initializing data in a shared volume. A sidecar container runs alongside the main container for the Pod's whole lifetime, which fits an ongoing capability accompanying the application, like a service mesh proxy intercepting all network traffic, or an agent continuously collecting and forwarding logs. Since Kubernetes 1.28, sidecars can be declared as a special kind of init container with restartPolicy Always, giving them a well-defined startup and shutdown order relative to the main container.",
+    },
+    pitfall: {
+      fr: "Le piège classique avant Kubernetes 1.28 était l'ordre d'arrêt d'un sidecar déclaré comme un simple conteneur normal du Pod : rien ne garantissait qu'il s'arrête après le conteneur principal, ce qui pouvait couper un proxy de service mesh avant que l'application ait fini de traiter ses dernières requêtes, un problème que le support natif des sidecars comme init containers résout en leur donnant un ordre d'arrêt explicite après les conteneurs principaux.",
+      en: "The classic trap before Kubernetes 1.28 was a sidecar declared as a plain regular Pod container's shutdown order: nothing guaranteed it would stop after the main container, which could cut a service mesh proxy before the application finished processing its last requests, a problem native sidecar support as init containers solves by giving them an explicit shutdown order after main containers.",
+    },
+    code: {
+      lang: "yaml",
+      snippet:
+        "initContainers:\n  - name: wait-for-db\n    image: busybox\n    command: [\"sh\", \"-c\", \"until nc -z db 5432; do sleep 2; done\"]\n  - name: log-shipper\n    image: fluent-bit\n    restartPolicy: Always  # sidecar natif, tourne en parallele du main",
+    },
+    tags: ["init-containers", "sidecars", "pod-design"],
+  },
+
+  // GCP (senior/architecte)
+  {
+    id: "gcp-workload-identity-federation",
+    topicId: "gcp",
+    difficulty: "hard",
+    question: {
+      fr: "Comment Workload Identity Federation permet-il d'éliminer complètement les clés de compte de service ?",
+      en: "How does Workload Identity Federation let you eliminate service account keys entirely ?",
+    },
+    answer: {
+      fr: "Une clé de compte de service est un identifiant statique et de longue durée qui, s'il fuite, reste valide et exploitable jusqu'à sa révocation manuelle, ce qui en fait un risque de sécurité permanent. Workload Identity Federation permet à une charge de travail qui s'exécute en dehors de GCP, par exemple sur AWS, sur un autre cloud, ou dans une pipeline CI/CD externe, de s'authentifier auprès de GCP en échangeant un jeton d'identité déjà émis par son propre fournisseur d'identité, sans jamais avoir besoin de créer ni de stocker de clé GCP statique. GCP fait confiance à ce jeton externe via une relation de fédération configurée à l'avance, et échange ce jeton contre des identifiants GCP temporaires et à courte durée de vie.",
+      en: "A service account key is a static, long-lived credential that, if leaked, stays valid and usable until manually revoked, making it a permanent security risk. Workload Identity Federation lets a workload running outside GCP, for example on AWS, on another cloud, or in an external CI/CD pipeline, authenticate to GCP by exchanging an identity token already issued by its own identity provider, with no need to ever create or store a static GCP key. GCP trusts that external token through a federation relationship configured in advance, and exchanges that token for temporary, short-lived GCP credentials.",
+    },
+    pitfall: {
+      fr: "Le piège est de continuer à créer des clés de compte de service par habitude pour des charges de travail externes, alors que Workload Identity Federation couvre désormais la grande majorité de ces cas : de nombreuses organisations gagneraient à auditer et éliminer progressivement leurs clés statiques existantes plutôt que d'en accepter la présence comme une fatalité.",
+      en: "The trap is continuing to create service account keys out of habit for external workloads, when Workload Identity Federation now covers the vast majority of those cases: many organizations would benefit from auditing and progressively eliminating their existing static keys rather than accepting their presence as inevitable.",
+    },
+    tags: ["workload-identity", "security", "authentication"],
+  },
+  {
+    id: "gcp-multi-region-architecture",
+    topicId: "gcp",
+    difficulty: "hard",
+    question: {
+      fr: "Quels sont les principaux défis d'une architecture multi-région sur GCP, au-delà du simple déploiement des mêmes services dans plusieurs régions ?",
+      en: "What are the main challenges of a multi-region architecture on GCP, beyond simply deploying the same services in several regions ?",
+    },
+    answer: {
+      fr: "Déployer les mêmes services applicatifs dans plusieurs régions est la partie relativement simple : le vrai défi est la donnée. Une base de données à cohérence forte, comme Cloud SQL, ne réplique naturellement que vers des réplicas en lecture dans d'autres régions, avec un failover manuel ou semi-automatique en cas de panne de la région primaire, ce qui impose de choisir entre disponibilité et cohérence en cas de partition réseau. Un service global comme Cloud Spanner résout ce problème par une cohérence forte distribuée nativement, au prix d'un coût et d'une latence d'écriture plus élevés. Le routage du trafic entre régions, via un load balancer global, doit aussi gérer le failover automatique et le drainage progressif du trafic pendant une bascule pour éviter une coupure brutale.",
+      en: "Deploying the same application services across multiple regions is the relatively easy part: the real challenge is data. A strongly consistent database, like Cloud SQL, only naturally replicates to read replicas in other regions, with manual or semi-automatic failover if the primary region fails, forcing a choice between availability and consistency during a network partition. A global service like Cloud Spanner solves this with natively distributed strong consistency, at the cost of higher write latency and cost. Traffic routing between regions, via a global load balancer, also needs to handle automatic failover and progressive traffic draining during a switchover to avoid an abrupt cutoff.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de ne parler que de la couche applicative sans mentionner le vrai défi de la couche donnée : une architecture multi-région qui néglige la stratégie de réplication et de failover de sa base de données n'est en réalité multi-région que pour le calcul, pas pour la résilience globale du système.",
+      en: "The interview trap is talking only about the application layer without mentioning the real data layer challenge: a multi-region architecture that neglects its database's replication and failover strategy is really only multi-region for compute, not for the system's overall resilience.",
+    },
+    tags: ["multi-region", "high-availability", "architecture"],
+  },
+  {
+    id: "gcp-cost-optimization-committed-use",
+    topicId: "gcp",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre les remises d'utilisation engagée et les remises d'utilisation continue sur GCP ?",
+      en: "What is the difference between committed use discounts and sustained use discounts on GCP ?",
+    },
+    answer: {
+      fr: "Les remises d'utilisation continue s'appliquent automatiquement, sans aucune action de configuration, dès qu'une ressource Compute Engine tourne suffisamment longtemps dans un mois, la remise augmentant progressivement avec la durée d'utilisation. Les remises d'utilisation engagée demandent un engagement explicite et anticipé sur un volume de ressources pour une durée d'un ou trois ans, en échange d'une réduction de prix nettement plus importante que la remise continue, mais avec l'obligation de payer ce volume engagé même si l'usage réel finit par être inférieur. Le choix dépend donc de la prévisibilité de la charge : un usage stable et prévisible sur le long terme justifie un engagement, un usage variable ou en forte croissance se contente mieux des remises automatiques.",
+      en: "Sustained use discounts apply automatically, with no configuration action at all, as soon as a Compute Engine resource runs long enough within a month, the discount progressively increasing with usage duration. Committed use discounts require an explicit, upfront commitment to a resource volume for a one or three year term, in exchange for a notably larger price reduction than the sustained discount, but with the obligation to pay for that committed volume even if actual usage ends up lower. The choice therefore depends on workload predictability: stable, predictable long-term usage justifies a commitment, variable or fast-growing usage is better served by the automatic discounts.",
+    },
+    pitfall: {
+      fr: "Le piège est de s'engager sur un volume de ressources trop optimiste en anticipation d'une croissance qui ne se réalise pas : contrairement à la remise d'utilisation continue qui ne coûte jamais plus que l'usage réel, un engagement mal dimensionné continue de facturer le volume promis même si l'usage réel chute, transformant une optimisation de coût en surcoût.",
+      en: "The trap is committing to an overly optimistic resource volume in anticipation of growth that doesn't materialize: unlike the sustained use discount which never costs more than actual usage, a poorly sized commitment keeps billing the promised volume even if actual usage drops, turning a cost optimization into an overspend.",
+    },
+    tags: ["cost-optimization", "finops", "compute-engine"],
+  },
+  {
+    id: "gcp-cloud-armor-security",
+    topicId: "gcp",
+    difficulty: "hard",
+    question: {
+      fr: "Quel rôle joue Cloud Armor dans une architecture GCP exposée sur Internet ?",
+      en: "What role does Cloud Armor play in a GCP architecture exposed to the internet ?",
+    },
+    answer: {
+      fr: "Cloud Armor est le pare-feu applicatif et la protection anti-DDoS de GCP, positionné en périphérie du réseau au niveau du load balancer global, avant même que le trafic n'atteigne les services backend. Il permet de définir des règles basées sur l'adresse IP source, la géolocalisation, ou des signatures d'attaques connues comme l'injection SQL ou le cross-site scripting via des règles préconfigurées, et absorbe les attaques volumétriques de déni de service directement en périphérie du réseau Google, avant qu'elles ne consomment la moindre ressource applicative. C'est une couche de défense complémentaire à la sécurité applicative elle-même, pas un substitut à une application qui validerait mal ses propres entrées.",
+      en: "Cloud Armor is GCP's web application firewall and anti-DDoS protection, positioned at the network edge at the global load balancer level, before traffic even reaches backend services. It lets you define rules based on source IP address, geolocation, or known attack signatures like SQL injection or cross-site scripting through preconfigured rules, and absorbs volumetric denial-of-service attacks right at Google's network edge, before they consume any application resources at all. It's a complementary defense layer to the application's own security, not a substitute for an application that poorly validates its own inputs.",
+    },
+    pitfall: {
+      fr: "Le piège est de considérer Cloud Armor comme suffisant à lui seul pour la sécurité applicative : les règles préconfigurées détectent des patterns d'attaques connus mais ne remplacent pas une validation rigoureuse des entrées côté application, une vulnérabilité applicative spécifique et non couverte par les signatures génériques reste exploitable même derrière Cloud Armor.",
+      en: "The trap is considering Cloud Armor sufficient on its own for application security: preconfigured rules detect known attack patterns but don't replace rigorous input validation on the application side, a specific application vulnerability not covered by generic signatures remains exploitable even behind Cloud Armor.",
+    },
+    tags: ["cloud-armor", "waf", "security"],
+  },
+  {
+    id: "gcp-terraform-project-factory",
+    topicId: "gcp",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que le pattern project factory avec Terraform sur GCP, et quel problème d'échelle résout-il ?",
+      en: "What is the Terraform project factory pattern on GCP, and what scaling problem does it solve ?",
+    },
+    answer: {
+      fr: "Sur GCP, un projet est l'unité de base d'isolation des ressources, de facturation et de permissions, et une organisation qui grandit finit souvent par en créer des dizaines, un par équipe ou par environnement. Le pattern project factory encapsule dans un module Terraform réutilisable toute la configuration standard qu'un nouveau projet doit respecter, la structure des comptes de service, les APIs activées par défaut, les règles IAM de base, les exports de logs vers un projet centralisé, pour que créer un nouveau projet conforme aux standards de l'organisation devienne un simple appel de module avec quelques paramètres plutôt qu'une configuration manuelle répétée et sujette aux oublis.",
+      en: "On GCP, a project is the basic unit of resource, billing and permission isolation, and a growing organization often ends up creating dozens of them, one per team or environment. The project factory pattern encapsulates, in a reusable Terraform module, all the standard configuration a new project must follow, service account structure, APIs enabled by default, baseline IAM rules, log exports to a centralized project, so creating a new project compliant with the organization's standards becomes a simple module call with a few parameters rather than a repeated, error-prone manual configuration.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter le project factory comme une configuration figée une fois pour toutes : les standards de l'organisation évoluent, un module qui n'est jamais mis à jour finit par créer de nouveaux projets non conformes aux exigences actuelles, la vraie valeur du pattern vient d'un module maintenu activement, pas seulement de son existence initiale.",
+      en: "The trap is treating the project factory as a configuration frozen once and for all: the organization's standards evolve, a module that's never updated ends up creating new projects that don't meet current requirements, the pattern's real value comes from an actively maintained module, not just its initial existence.",
+    },
+    tags: ["project-factory", "terraform", "governance"],
+  },
+
+  // Kafka (senior/architecte)
+  {
+    id: "kafka-transactional-outbox-pattern",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que le pattern transactional outbox, et quel problème résout-il quand un service doit à la fois écrire en base et publier un événement Kafka ?",
+      en: "What is the transactional outbox pattern, and what problem does it solve when a service must both write to a database and publish a Kafka event ?",
+    },
+    answer: {
+      fr: "Écrire en base de données et publier sur Kafka sont deux opérations sur deux systèmes distincts qui ne partagent pas de transaction commune : si l'écriture en base réussit mais que la publication Kafka échoue juste après, ou l'inverse, le système se retrouve dans un état incohérent où l'événement publié ne reflète pas la réalité, ou où un changement d'état n'est jamais notifié. Le pattern outbox résout ça en écrivant, dans la même transaction de base de données que le changement métier, une ligne représentant l'événement à publier dans une table outbox dédiée. Un processus séparé, souvent basé sur Change Data Capture, lit ensuite cette table et publie réellement les événements vers Kafka, garantissant qu'un événement n'est jamais perdu ni publié sans que le changement métier correspondant ait réellement été validé.",
+      en: "Writing to a database and publishing to Kafka are two operations on two separate systems that don't share a common transaction: if the database write succeeds but the Kafka publish fails right after, or vice versa, the system ends up in an inconsistent state where the published event doesn't reflect reality, or a state change is never notified. The outbox pattern solves this by writing, within the same database transaction as the business change, a row representing the event to publish into a dedicated outbox table. A separate process, often based on Change Data Capture, then reads that table and actually publishes the events to Kafka, guaranteeing an event is never lost nor published without the matching business change having actually been committed.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de proposer d'appeler directement Kafka juste après le commit de la transaction base de données comme solution suffisante : ça laisse une fenêtre où le processus peut planter entre les deux opérations, l'outbox garantit l'atomicité en rattachant la publication à la même transaction que l'écriture métier, pas en les enchaînant l'une après l'autre.",
+      en: "The interview trap is proposing calling Kafka directly right after the database transaction commits as a sufficient solution: that leaves a window where the process can crash between the two operations, the outbox guarantees atomicity by tying publication to the same transaction as the business write, not by chaining them one after the other.",
+    },
+    tags: ["outbox-pattern", "distributed-transactions", "reliability"],
+  },
+  {
+    id: "kafka-multi-datacenter-replication",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Comment MirrorMaker 2 permet-il de répliquer des topics Kafka entre plusieurs datacenters, et quel compromis cela impose-t-il ?",
+      en: "How does MirrorMaker 2 let you replicate Kafka topics across multiple datacenters, and what trade-off does that impose ?",
+    },
+    answer: {
+      fr: "MirrorMaker 2 est un connecteur qui consomme les messages d'un cluster Kafka source et les republie vers un cluster Kafka cible, généralement situé dans un autre datacenter ou une autre région, en préservant les partitions et en propageant aussi les mises à jour de configuration des topics et les offsets des consumer groups. Cette réplication est asynchrone par nature : il existe toujours un délai, même faible, entre l'écriture dans le cluster source et sa disponibilité dans le cluster cible, ce qui signifie qu'en cas de bascule vers le datacenter de secours, les tout derniers messages écrits juste avant la panne du cluster source peuvent ne pas encore avoir été répliqués.",
+      en: "MirrorMaker 2 is a connector that consumes messages from a source Kafka cluster and republishes them to a target Kafka cluster, generally located in another datacenter or region, preserving partitions and also propagating topic configuration updates and consumer group offsets. This replication is asynchronous by nature: there's always a delay, even a small one, between a write in the source cluster and its availability in the target cluster, meaning that in case of failover to the backup datacenter, the very last messages written just before the source cluster's failure may not have been replicated yet.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'une bascule vers le datacenter de secours après une réplication MirrorMaker 2 garantit zéro perte de données : c'est une réplication asynchrone, pas une réplication synchrone comme celle des réplicas au sein d'un même cluster Kafka, accepter ce compromis de perte de données potentielle en cas de bascule est une décision d'architecture à assumer explicitement, pas un détail d'implémentation.",
+      en: "The trap is believing a failover to the backup datacenter after MirrorMaker 2 replication guarantees zero data loss: it's asynchronous replication, not the synchronous replication used by in-sync replicas within a single Kafka cluster, accepting this potential data loss trade-off during failover is an architecture decision to make explicitly, not an implementation detail.",
+    },
+    tags: ["mirrormaker", "disaster-recovery", "multi-datacenter"],
+  },
+  {
+    id: "kafka-consumer-rebalance-strategies",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre le rebalancing eager et le rebalancing coopératif sticky dans un consumer group Kafka ?",
+      en: "What is the difference between eager rebalancing and cooperative sticky rebalancing in a Kafka consumer group ?",
+    },
+    answer: {
+      fr: "Le rebalancing eager, la stratégie historique, retire à tous les consommateurs du groupe l'intégralité de leurs partitions assignées dès qu'un rebalancing démarre, puis les réattribue entièrement à la fin, ce qui arrête totalement la consommation pour tout le groupe pendant la durée du rebalancing, même pour les consommateurs qui ne changent finalement pas d'assignation. Le rebalancing coopératif sticky ne retire que les partitions qui doivent effectivement changer de consommateur, en plusieurs petites étapes successives, permettant aux autres consommateurs de continuer à traiter leurs partitions inchangées pendant tout le processus, ce qui réduit considérablement l'interruption globale du groupe, en particulier avec un grand nombre de partitions ou de consommateurs.",
+      en: "Eager rebalancing, the historical strategy, strips every consumer in the group of all their assigned partitions as soon as a rebalance starts, then fully reassigns them at the end, which entirely halts consumption for the whole group during the rebalance, even for consumers whose assignment doesn't ultimately change. Cooperative sticky rebalancing only revokes the partitions that actually need to move to a different consumer, in several small successive steps, letting other consumers keep processing their unchanged partitions throughout the process, considerably reducing the group's overall interruption, especially with a large number of partitions or consumers.",
+    },
+    pitfall: {
+      fr: "Le piège est de changer la stratégie de rebalancing sur un seul consommateur du groupe sans l'appliquer de façon cohérente à tous : la stratégie coopérative sticky nécessite que tous les membres du groupe la supportent, un mélange de configurations incompatibles entre consommateurs peut provoquer des erreurs de configuration bloquantes plutôt qu'un rebalancing dégradé.",
+      en: "The trap is changing the rebalancing strategy on a single consumer in the group without applying it consistently across all of them: cooperative sticky rebalancing requires every group member to support it, a mix of incompatible configurations across consumers can cause blocking configuration errors rather than a merely degraded rebalance.",
+    },
+    tags: ["rebalancing", "consumer-groups", "cooperative-sticky"],
+  },
+  {
+    id: "kafka-tiered-storage",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'apporte le stockage à niveaux (tiered storage) dans Kafka, et quel problème structurel résout-il ?",
+      en: "What does tiered storage bring to Kafka, and what structural problem does it solve ?",
+    },
+    answer: {
+      fr: "Historiquement, chaque broker Kafka stocke l'intégralité des données d'une partition sur son propre disque local, ce qui couple étroitement la capacité de stockage à la capacité de calcul : pour conserver plus longtemps l'historique d'un topic, il faut ajouter plus de disque à chaque broker, même si le débit de traitement n'a pas besoin d'augmenter. Le stockage à niveaux découple les deux en déplaçant automatiquement les segments de log les plus anciens, moins susceptibles d'être lus fréquemment, vers un stockage objet distant bon marché, comme S3 ou GCS, tout en gardant les données récentes sur le disque local rapide des brokers. Ça permet de conserver un historique de rétention beaucoup plus long à moindre coût, sans avoir à sur-dimensionner le disque local de chaque broker.",
+      en: "Historically, each Kafka broker stores an entire partition's data on its own local disk, which tightly couples storage capacity to compute capacity: to keep a topic's history longer, you need to add more disk to every broker, even if processing throughput doesn't need to grow. Tiered storage decouples the two by automatically moving older log segments, less likely to be read frequently, to cheap remote object storage, like S3 or GCS, while keeping recent data on the brokers' fast local disk. This allows for much longer retention history at lower cost, without having to oversize each broker's local disk.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que le stockage à niveaux élimine tout coût ou toute latence supplémentaire pour lire de vieilles données : lire un segment déplacé vers le stockage objet distant reste plus lent qu'une lecture sur disque local, le stockage à niveaux optimise le coût de rétention longue durée, pas la latence de lecture sur les données anciennes.",
+      en: "The trap is believing tiered storage eliminates all extra cost or latency for reading old data: reading a segment moved to remote object storage remains slower than a local disk read, tiered storage optimizes long-term retention cost, not read latency on old data.",
+    },
+    tags: ["tiered-storage", "cost-optimization", "kafka-architecture"],
+  },
+  {
+    id: "kafka-idempotent-consumer-pattern",
+    topicId: "kafka",
+    difficulty: "hard",
+    question: {
+      fr: "Comment implémenter un consommateur idempotent pour absorber sans risque la sémantique at-least-once par défaut de Kafka ?",
+      en: "How do you implement an idempotent consumer to safely absorb Kafka's default at-least-once semantics ?",
+    },
+    answer: {
+      fr: "Puisque Kafka livre par défaut chaque message au moins une fois, un même message peut être traité plusieurs fois par le consommateur en cas de retry après une panne. Un consommateur idempotent garantit que traiter le même message plusieurs fois produit exactement le même résultat que le traiter une seule fois, généralement en enregistrant les identifiants des messages déjà traités dans un magasin durable, comme une colonne unique en base de données, et en vérifiant cet identifiant avant tout traitement pour ignorer silencieusement un doublon déjà connu. Une alternative consiste à concevoir l'effet de bord lui-même pour qu'il soit naturellement idempotent, par exemple un UPSERT en base plutôt qu'un INSERT, qui donne le même résultat final qu'il soit exécuté une ou plusieurs fois.",
+      en: "Since Kafka delivers each message at least once by default, the same message can be processed more than once by the consumer after a retry following a failure. An idempotent consumer guarantees that processing the same message multiple times produces exactly the same result as processing it once, generally by recording already-processed message identifiers in a durable store, like a unique column in a database, and checking that identifier before any processing to silently skip a known duplicate. An alternative is designing the side effect itself to be naturally idempotent, for example an UPSERT in a database rather than an INSERT, which gives the same final result whether executed once or multiple times.",
+    },
+    pitfall: {
+      fr: "Le piège est de ne dédupliquer qu'en mémoire locale au processus consommateur : un redémarrage du consommateur perd cet état de déduplication et peut retraiter un message déjà traité avant le redémarrage, l'état de déduplication doit être stocké dans un support durable, cohérent avec l'effet de bord lui-même, idéalement dans la même transaction si possible.",
+      en: "The trap is deduplicating only in memory local to the consumer process: a consumer restart loses that deduplication state and can reprocess a message already handled before the restart, deduplication state must be stored in a durable store, consistent with the side effect itself, ideally in the same transaction if possible.",
+    },
+    code: {
+      lang: "sql",
+      snippet:
+        "-- Deduplication via contrainte unique + upsert idempotent\nCREATE TABLE processed_events (event_id UUID PRIMARY KEY);\n\nINSERT INTO processed_events (event_id) VALUES ($1)\nON CONFLICT (event_id) DO NOTHING;\n-- si 0 ligne affectee, le message a deja ete traite : on l'ignore",
+    },
+    tags: ["idempotent-consumer", "at-least-once", "reliability"],
+  },
+
+  // Kotlin (senior/architecte)
+  {
+    id: "kotlin-flow-vs-livedata",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Quels avantages Kotlin Flow apporte-t-il par rapport à des callbacks classiques pour représenter un flux de valeurs asynchrones dans le temps ?",
+      en: "What advantages does Kotlin Flow bring over classic callbacks for representing an asynchronous stream of values over time ?",
+    },
+    answer: {
+      fr: "Un Flow représente un flux de valeurs émises de façon asynchrone dans le temps, construit sur les coroutines, avec un support natif des opérateurs de transformation comme map, filter ou debounce, ce qu'un simple callback n'offre pas sans bibliothèque additionnelle. Contrairement à un callback enregistré manuellement, un Flow est froid par défaut : il ne commence à produire des valeurs que lorsqu'un collecteur s'y abonne via collect, et s'arrête proprement, y compris en libérant ses ressources, quand la coroutine qui le collecte est annulée, ce qui évite les fuites classiques d'un callback qu'on oublie de désenregistrer.",
+      en: "A Flow represents a stream of values emitted asynchronously over time, built on coroutines, with native support for transformation operators like map, filter or debounce, which a plain callback doesn't offer without an additional library. Unlike a manually registered callback, a Flow is cold by default: it only starts producing values once a collector subscribes via collect, and stops cleanly, including releasing its resources, when the coroutine collecting it is cancelled, avoiding the classic leak of a callback one forgets to unregister.",
+    },
+    pitfall: {
+      fr: "Le piège est de confondre un Flow froid, qui redémarre sa production depuis le début pour chaque nouveau collecteur, avec un StateFlow ou un SharedFlow, chauds, qui partagent une seule émission en cours entre plusieurs collecteurs : utiliser un Flow froid là où on voulait en réalité partager un seul état observé par plusieurs composants recrée inutilement la même logique de production à chaque abonnement.",
+      en: "The trap is confusing a cold Flow, which restarts its production from scratch for every new collector, with a hot StateFlow or SharedFlow, which share a single ongoing emission across multiple collectors: using a cold Flow where you actually wanted to share a single state observed by several components needlessly recreates the same production logic on every subscription.",
+    },
+    code: {
+      lang: "kotlin",
+      snippet:
+        "fun searchResults(query: Flow<String>): Flow<List<Result>> =\n    query\n        .debounce(300)\n        .distinctUntilChanged()\n        .flatMapLatest { q -> api.search(q) }\n        .catch { emit(emptyList()) }",
+    },
+    tags: ["kotlin-flow", "coroutines", "reactive-streams"],
+  },
+  {
+    id: "kotlin-multiplatform-basics",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Que permet Kotlin Multiplatform, et comment le code commun cohabite-t-il avec du code spécifique à chaque plateforme ?",
+      en: "What does Kotlin Multiplatform enable, and how does common code coexist with platform-specific code ?",
+    },
+    answer: {
+      fr: "Kotlin Multiplatform permet d'écrire une seule fois la logique métier partagée, comme les modèles de données, les règles de validation ou les appels réseau, et de la compiler pour plusieurs cibles, Android, iOS, backend JVM ou web, plutôt que de dupliquer cette logique dans chaque plateforme avec son propre langage. Quand une fonctionnalité a besoin d'une capacité spécifique à une plateforme, comme l'accès à un capteur natif, le code commun déclare une fonction ou une classe attendue via le mot-clé expect, et chaque plateforme fournit sa propre implémentation concrète via actual, le compilateur s'assurant que chaque cible dispose bien de l'implémentation attendue.",
+      en: "Kotlin Multiplatform lets you write shared business logic once, like data models, validation rules or network calls, and compile it for several targets, Android, iOS, JVM backend or web, rather than duplicating that logic in each platform with its own language. When a feature needs a platform-specific capability, like access to a native sensor, the common code declares an expected function or class via the expect keyword, and each platform supplies its own concrete implementation via actual, the compiler ensuring every target does have the expected implementation.",
+    },
+    pitfall: {
+      fr: "Le piège est de vouloir partager l'intégralité de l'interface utilisateur en Kotlin Multiplatform en pensant obtenir le même bénéfice que pour la logique métier : l'UI reste généralement spécifique à chaque plateforme, sauf à adopter Compose Multiplatform qui étend le partage jusqu'à l'interface, la promesse historique de KMP se limite d'abord à la logique métier, pas à l'apparence de l'application.",
+      en: "The trap is wanting to share the entire user interface in Kotlin Multiplatform expecting the same benefit as for business logic: the UI generally stays platform-specific, unless adopting Compose Multiplatform which extends sharing to the interface, KMP's original promise is first about business logic, not the application's appearance.",
+    },
+    tags: ["kotlin-multiplatform", "kmp", "cross-platform"],
+  },
+  {
+    id: "kotlin-delegated-properties",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Comment fonctionnent les propriétés déléguées en Kotlin, et à quoi servent by lazy et Delegates.observable ?",
+      en: "How do delegated properties work in Kotlin, and what are by lazy and Delegates.observable for ?",
+    },
+    answer: {
+      fr: "Une propriété déléguée transfère la logique de son accesseur get et éventuellement de son mutateur set à un objet séparé, plutôt que d'écrire cette logique directement dans chaque propriété qui en a besoin, ce qui permet de réutiliser un comportement générique de gestion de propriété à travers de nombreuses classes différentes. by lazy calcule la valeur d'une propriété seulement au premier accès, puis met en cache ce résultat pour tous les accès suivants, ce qui convient à une initialisation coûteuse dont on n'est pas sûr qu'elle sera nécessaire. Delegates.observable exécute un callback à chaque changement de valeur de la propriété, avec l'ancienne et la nouvelle valeur, ce qui convient à un besoin de réaction automatique, comme rafraîchir un affichage dès qu'un champ change.",
+      en: "A delegated property offloads its getter's logic, and optionally its setter's, to a separate object, rather than writing that logic directly in every property that needs it, letting a generic property management behavior be reused across many different classes. by lazy computes a property's value only on first access, then caches that result for every following access, which fits an expensive initialization one isn't sure will actually be needed. Delegates.observable runs a callback on every change of the property's value, with the old and new value, which fits a need for automatic reaction, like refreshing a display as soon as a field changes.",
+    },
+    pitfall: {
+      fr: "Le piège est d'utiliser by lazy avec son mode de synchronisation par défaut, thread-safe, dans un contexte où la propriété n'est de toute façon accédée que par un seul thread : ce mode par défaut ajoute un coût de synchronisation inutile, le paramètre LazyThreadSafetyMode.NONE évite ce coût quand l'accès mono-thread est garanti.",
+      en: "The trap is using by lazy with its default, thread-safe synchronization mode in a context where the property is only ever accessed by a single thread anyway: that default mode adds an unnecessary synchronization cost, the LazyThreadSafetyMode.NONE parameter avoids that cost when single-threaded access is guaranteed.",
+    },
+    code: {
+      lang: "kotlin",
+      snippet:
+        "class UserSession {\n    val config: Config by lazy(LazyThreadSafetyMode.NONE) {\n        loadExpensiveConfig()\n    }\n\n    var theme: String by Delegates.observable(\"light\") { _, old, new ->\n        println(\"theme change: $old -> $new\")\n    }\n}",
+    },
+    tags: ["delegated-properties", "language-features"],
+  },
+  {
+    id: "kotlin-contracts-and-smart-casts",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que l'API contracts en Kotlin, et quel problème de smart cast résout-elle pour des fonctions utilitaires personnalisées ?",
+      en: "What is Kotlin's contracts API, and what smart cast problem does it solve for custom utility functions ?",
+    },
+    answer: {
+      fr: "Le compilateur Kotlin effectue un smart cast automatique après une vérification comme if (x != null) ou if (x is String), parce qu'il sait analyser ce type de condition directement dans le code. Ce raisonnement s'arrête cependant net dès que la vérification passe par une fonction utilitaire personnalisée, comme une fonction isValid(x) qui encapsule en interne la même vérification : le compilateur ne peut pas savoir que cette fonction garantit quoi que ce soit sur le type ou la nullabilité de x après son appel. L'API contracts permet de déclarer explicitement, dans la signature de cette fonction utilitaire, la garantie qu'elle fournit, ce qui permet au compilateur d'appliquer le smart cast même à travers cet appel de fonction.",
+      en: "The Kotlin compiler performs an automatic smart cast after a check like if (x != null) or if (x is String), because it knows how to analyze that kind of condition directly in the code. That reasoning stops dead, however, as soon as the check goes through a custom utility function, like an isValid(x) function that internally wraps the same check: the compiler can't know that function guarantees anything about x's type or nullability after it's called. The contracts API lets you explicitly declare, in that utility function's signature, the guarantee it provides, letting the compiler apply the smart cast even across that function call.",
+    },
+    pitfall: {
+      fr: "Le piège est de déclarer un contrat qui ne correspond pas réellement au comportement de la fonction, par exemple promettre qu'un paramètre est toujours non nul en sortie alors que la fonction peut dans certains cas retourner sans que ce soit vrai : le compilateur fait confiance au contrat déclaré sans le vérifier lui-même, un contrat mensonger peut introduire un bug de type non détecté à la compilation.",
+      en: "The trap is declaring a contract that doesn't actually match the function's behavior, for example promising a parameter is always non-null on exit when the function can in some cases return without that being true: the compiler trusts the declared contract without verifying it itself, a false contract can introduce a type bug undetected at compile time.",
+    },
+    code: {
+      lang: "kotlin",
+      snippet:
+        "fun requireNotBlank(value: String?): Boolean {\n    contract {\n        returns(true) implies (value != null)\n    }\n    return !value.isNullOrBlank()\n}\n\nfun greet(name: String?) {\n    if (requireNotBlank(name)) {\n        println(name.length) // smart cast : name est String ici\n    }\n}",
+    },
+    tags: ["contracts", "smart-cast", "type-system"],
+  },
+  {
+    id: "kotlin-value-classes",
+    topicId: "kotlin",
+    difficulty: "hard",
+    question: {
+      fr: "Que sont les value classes en Kotlin, et en quoi permettent-elles d'ajouter un typage fort sans coût à l'exécution ?",
+      en: "What are value classes in Kotlin, and how do they add strong typing with no runtime cost ?",
+    },
+    answer: {
+      fr: "Une value class enveloppe une seule valeur, par exemple un Long représentant un identifiant, dans un type distinct qui empêche à la compilation de confondre par erreur un UserId avec un OrderId même s'ils partagent le même type sous-jacent. Dans la plupart des cas, le compilateur inline complètement cette enveloppe et manipule directement la valeur sous-jacente au moment de l'exécution, sans jamais créer d'objet wrapper réel en mémoire, ce qui donne la sécurité de typage d'une classe dédiée sans le coût mémoire ni l'indirection d'une vraie allocation d'objet.",
+      en: "A value class wraps a single value, for example a Long representing an identifier, in a distinct type that prevents mistakenly confusing a UserId with an OrderId at compile time even though they share the same underlying type. In most cases, the compiler fully inlines that wrapper and directly manipulates the underlying value at runtime, never creating a real wrapper object in memory, which gives the type safety of a dedicated class with none of the memory cost or indirection of a real object allocation.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire que l'inlining s'applique systématiquement dans tous les contextes : dès qu'une value class est utilisée comme type générique, stockée dans une collection d'objets, ou exposée via une interface, le compilateur doit la boxer comme un objet réel, annulant l'avantage de performance dans ces cas précis, ce qui reste rarement un problème en pratique mais doit être connu.",
+      en: "The trap is believing inlining systematically applies in every context: as soon as a value class is used as a generic type, stored in a collection of objects, or exposed through an interface, the compiler has to box it as a real object, canceling the performance benefit in those specific cases, which is rarely an issue in practice but should be known.",
+    },
+    code: {
+      lang: "kotlin",
+      snippet:
+        "@JvmInline\nvalue class UserId(val value: Long)\n\n@JvmInline\nvalue class OrderId(val value: Long)\n\nfun getOrder(userId: UserId, orderId: OrderId) { /* ... */ }\n// getOrder(orderId, userId) ne compile pas : erreur de type detectee",
+    },
+    tags: ["value-classes", "inline-classes", "type-safety"],
+  },
+
+  // GitHub Copilot (senior/architecte)
+  {
+    id: "copilot-enterprise-governance",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "Quels leviers de gouvernance une organisation met-elle en place pour déployer un outil comme Copilot à l'échelle de l'entreprise ?",
+      en: "What governance levers does an organization put in place to roll out a tool like Copilot enterprise-wide ?",
+    },
+    answer: {
+      fr: "À l'échelle individuelle, chaque développeur décide seul de ce qu'il accepte ou non, mais à l'échelle d'une entreprise, il faut une politique explicite qui couvre plusieurs axes : quels dépôts et quelles données de code peuvent être exposés à l'outil, en particulier pour du code sous contrat de confidentialité avec un client, quelles restrictions s'appliquent au filtrage des suggestions proches de code protégé, quel niveau d'audit et de traçabilité est nécessaire sur l'usage de l'outil, et comment cette politique s'articule avec les exigences réglementaires du secteur, comme la finance ou la santé, qui peuvent interdire purement et simplement l'envoi de certains types de code vers un service tiers.",
+      en: "At the individual scale, each developer decides alone what to accept or not, but at enterprise scale, an explicit policy is needed covering several axes: which repositories and code data can be exposed to the tool, especially for code under a confidentiality agreement with a client, what restrictions apply to filtering suggestions close to protected code, what level of audit and traceability is needed on the tool's usage, and how that policy fits with the sector's regulatory requirements, like finance or healthcare, which can outright forbid sending certain kinds of code to a third-party service.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter l'adoption d'un outil d'IA comme une simple décision d'achat de licence sans impliquer les équipes sécurité et conformité en amont : découvrir après coup qu'un usage non encadré a exposé du code sensible à un service tiers coûte bien plus cher, en réputation et en remédiation, que le temps investi à cadrer la politique d'usage avant le déploiement.",
+      en: "The trap is treating adoption of an AI tool as a simple license purchase decision without involving security and compliance teams upfront: discovering after the fact that unregulated usage exposed sensitive code to a third-party service costs far more, in reputation and remediation, than the time invested in framing the usage policy before rollout.",
+    },
+    tags: ["governance", "enterprise-adoption", "compliance"],
+  },
+  {
+    id: "copilot-custom-instructions",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "À quoi servent des fichiers d'instructions personnalisées pour un assistant IA au niveau d'un dépôt, et quel problème d'équipe résolvent-ils ?",
+      en: "What are custom instruction files for an AI assistant at the repository level for, and what team problem do they solve ?",
+    },
+    answer: {
+      fr: "Sans contexte partagé, chaque développeur d'une équipe interagit avec l'assistant IA avec ses propres habitudes de formulation, ce qui produit des suggestions de style et de convention incohérentes d'un développeur à l'autre sur le même projet. Un fichier d'instructions personnalisées, versionné dans le dépôt au même titre que le code, encode une fois pour toutes les conventions de l'équipe, la structure du projet, les patterns à privilégier ou à éviter, ce que tout membre de l'équipe bénéficie automatiquement sans avoir à répéter ce contexte à chaque session. C'est un changement d'échelle : on ne configure plus l'assistant pour soi, on configure le comportement attendu de l'assistant pour tout le projet.",
+      en: "Without shared context, every developer on a team interacts with the AI assistant using their own phrasing habits, producing inconsistent style and convention suggestions from one developer to another on the same project. A custom instructions file, versioned in the repository alongside the code, encodes the team's conventions once and for all, the project structure, the patterns to favor or avoid, which every team member automatically benefits from without repeating that context every session. It's a change of scale: you're no longer configuring the assistant for yourself, you're configuring the assistant's expected behavior for the whole project.",
+    },
+    pitfall: {
+      fr: "Le piège est de laisser ce fichier d'instructions devenir obsolète par rapport à l'évolution réelle du projet, par exemple s'il mentionne encore une convention ou une architecture abandonnée depuis : un fichier d'instructions non maintenu peut activement induire l'assistant en erreur, il doit être révisé avec la même rigueur qu'une documentation d'architecture vivante.",
+      en: "The trap is letting this instructions file become outdated relative to the project's actual evolution, for example if it still mentions a convention or architecture abandoned since: an unmaintained instructions file can actively mislead the assistant, it needs to be reviewed with the same rigor as living architecture documentation.",
+    },
+    tags: ["custom-instructions", "team-workflow", "developer-experience"],
+  },
+  {
+    id: "copilot-agentic-coding-vs-autocomplete",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "En quoi un mode de codage agentique diffère-t-il fondamentalement de la simple complétion autocomplete, en termes de risque et de supervision nécessaire ?",
+      en: "How does an agentic coding mode fundamentally differ from simple autocomplete, in terms of risk and needed supervision ?",
+    },
+    answer: {
+      fr: "L'autocomplete propose une suggestion locale que le développeur relit avant de l'accepter ligne par ligne ou bloc par bloc, ce qui donne un point de contrôle humain à chaque petite modification. Un mode agentique planifie et applique lui-même une série de modifications à travers plusieurs fichiers, exécute potentiellement des commandes, et peut itérer plusieurs fois avant de présenter un résultat final, ce qui déplace le point de contrôle humain de chaque ligne individuelle vers l'ensemble du plan et son exécution. Ça demande une supervision différente : relire un diff complet et cohérent plutôt que chaque suggestion isolée, et surtout limiter les capacités que l'agent peut exercer sans confirmation explicite, en particulier pour des actions difficiles à annuler.",
+      en: "Autocomplete offers a local suggestion the developer reviews before accepting it line by line or block by block, giving a human checkpoint at every small change. An agentic mode plans and applies a series of changes across several files itself, potentially runs commands, and can iterate several times before presenting a final result, moving the human checkpoint from every individual line to the overall plan and its execution. This demands different supervision: reviewing a complete, coherent diff rather than each isolated suggestion, and especially limiting the capabilities the agent can exercise without explicit confirmation, particularly for hard-to-undo actions.",
+    },
+    pitfall: {
+      fr: "Le piège est d'appliquer la même vigilance qu'avec l'autocomplete à un mode agentique, en relisant superficiellement un gros diff multi-fichiers de la même façon qu'on relirait une seule ligne suggérée : le volume et la portée d'un changement agentique demandent une revue plus structurée, en particulier sur les fichiers de configuration ou les points d'entrée sensibles que le diff peut toucher sans que ce soit évident au premier coup d'œil.",
+      en: "The trap is applying the same vigilance used for autocomplete to an agentic mode, superficially skimming a large multi-file diff the same way one would review a single suggested line: the volume and scope of an agentic change demands a more structured review, especially on configuration files or sensitive entry points the diff might touch without it being obvious at first glance.",
+    },
+    tags: ["agentic-coding", "risk-management", "code-review"],
+  },
+  {
+    id: "copilot-vs-open-source-alternatives",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "Pour un environnement fortement réglementé, quels critères font pencher vers un modèle auto-hébergé plutôt qu'un assistant cloud comme Copilot ?",
+      en: "For a heavily regulated environment, what criteria tip the balance toward a self-hosted model rather than a cloud assistant like Copilot ?",
+    },
+    answer: {
+      fr: "Un assistant cloud envoie systématiquement le contexte de code à un service tiers pour générer ses suggestions, ce qui pose un problème direct dans un secteur où la réglementation interdit la sortie de certaines données du périmètre de l'entreprise, comme certaines données bancaires ou de santé selon les juridictions. Un modèle open source auto-hébergé, exécuté entièrement dans l'infrastructure de l'entreprise, élimine ce problème de sortie de données au prix d'une qualité de suggestion généralement inférieure aux meilleurs modèles propriétaires, et d'une charge opérationnelle réelle pour héberger et maintenir l'infrastructure d'inférence nécessaire, en particulier le matériel GPU. Le choix dépend donc d'un arbitrage entre contrainte réglementaire stricte et qualité de l'assistance obtenue.",
+      en: "A cloud assistant systematically sends code context to a third-party service to generate its suggestions, which poses a direct problem in a sector where regulation forbids certain data from leaving the company's perimeter, like certain banking or healthcare data depending on jurisdiction. A self-hosted open source model, running entirely within the company's infrastructure, eliminates that data egress problem at the cost of generally lower suggestion quality than the best proprietary models, and a real operational burden to host and maintain the necessary inference infrastructure, especially GPU hardware. The choice therefore depends on a trade-off between strict regulatory constraints and the quality of assistance obtained.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter l'auto-hébergement comme automatiquement plus sûr sans nuancer : un modèle auto-hébergé mal opéré, avec des accès mal contrôlés à l'infrastructure d'inférence, peut présenter des risques de sécurité tout aussi réels qu'un service cloud, la contrainte réglementaire porte sur la sortie de données hors périmètre, pas sur une garantie automatique de sécurité supérieure.",
+      en: "The interview trap is presenting self-hosting as automatically safer with no nuance: a poorly operated self-hosted model, with poorly controlled access to the inference infrastructure, can present security risks just as real as a cloud service, the regulatory constraint is about data leaving the perimeter, not an automatic guarantee of superior security.",
+    },
+    tags: ["self-hosted-llm", "regulated-industries", "data-privacy"],
+  },
+  {
+    id: "copilot-measuring-code-quality-impact",
+    topicId: "copilot",
+    difficulty: "hard",
+    question: {
+      fr: "Comment mesurer si l'usage intensif d'un assistant IA dégrade ou améliore la dette technique d'un projet sur le long terme ?",
+      en: "How do you measure whether heavy AI assistant usage degrades or improves a project's technical debt over the long term ?",
+    },
+    answer: {
+      fr: "La dette technique se manifeste rarement immédiatement : elle apparaît plutôt dans la difficulté croissante à faire évoluer le code plusieurs mois plus tard. Des indicateurs pertinents incluent l'évolution du temps nécessaire pour implémenter une fonctionnalité de complexité comparable au fil du temps, le taux de duplication de code détecté par des outils d'analyse statique, la fréquence à laquelle un même module doit être retouché à cause de bugs récurrents, et le ratio entre code ajouté et code supprimé lors des refactorings, un ratio qui pencherait anormalement vers l'ajout pouvant signaler une accumulation de code jamais vraiment consolidé. Aucun indicateur seul ne suffit, la dette technique se lit dans une tendance sur plusieurs mois, pas dans une mesure ponctuelle.",
+      en: "Technical debt rarely shows up immediately: it tends to appear instead in the growing difficulty of evolving the code several months later. Relevant indicators include how the time needed to implement a feature of comparable complexity evolves over time, the code duplication rate detected by static analysis tools, how often the same module needs rework due to recurring bugs, and the ratio of code added to code removed during refactoring, a ratio abnormally skewed toward addition potentially signaling an accumulation of code never truly consolidated. No single indicator is enough on its own, technical debt shows up as a trend over several months, not in a one-off measurement.",
+    },
+    pitfall: {
+      fr: "Le piège est de vouloir mesurer l'impact sur la dette technique avec une seule métrique instantanée, comme un score de qualité de code calculé une fois : la vraie question est de savoir si cette métrique se dégrade ou s'améliore dans le temps en comparant des périodes avant et après l'adoption massive de l'outil, pas sa valeur absolue à un instant donné.",
+      en: "The trap is trying to measure technical debt impact with a single instantaneous metric, like a code quality score computed once: the real question is whether that metric degrades or improves over time by comparing periods before and after the tool's heavy adoption, not its absolute value at a given moment.",
+    },
+    tags: ["technical-debt", "engineering-metrics", "long-term-quality"],
+  },
+
+  // AWS (senior/architecte)
+  {
+    id: "aws-multi-account-landing-zone",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi une organisation adopte-t-elle une stratégie multi-compte avec AWS Organizations plutôt qu'un seul compte AWS pour tout ?",
+      en: "Why does an organization adopt a multi-account strategy with AWS Organizations rather than a single AWS account for everything ?",
+    },
+    answer: {
+      fr: "Un compte AWS est la frontière la plus forte d'isolation disponible, plus stricte qu'un simple découpage en VPC ou en tags à l'intérieur d'un même compte : une mauvaise configuration IAM ou une charge qui dérape en consommation de ressources reste confinée à un seul compte plutôt que de menacer l'ensemble du système. AWS Organizations permet de gérer de façon centralisée de nombreux comptes, en général un par équipe, par environnement ou par charge de travail, avec une consolidation de la facturation, des politiques de sécurité appliquées automatiquement à tous les comptes via des Service Control Policies, et une landing zone qui fournit une structure de base cohérente, journalisation centralisée, comptes de sécurité dédiés, dès la création d'un nouveau compte.",
+      en: "An AWS account is the strongest isolation boundary available, stricter than a simple split into VPCs or tags within a single account: a bad IAM configuration or a workload that runs away with resource consumption stays confined to one account rather than threatening the whole system. AWS Organizations lets you centrally manage many accounts, generally one per team, environment or workload, with consolidated billing, security policies automatically applied to every account via Service Control Policies, and a landing zone that provides a consistent baseline structure, centralized logging, dedicated security accounts, from the moment a new account is created.",
+    },
+    pitfall: {
+      fr: "Le piège est de sous-estimer la charge de gouvernance nécessaire dès que le nombre de comptes grandit : sans landing zone standardisée et automatisée dès le départ, chaque nouveau compte créé manuellement dérive progressivement des standards de sécurité de l'organisation, une prolifération de comptes non gouvernés est souvent pire qu'un seul compte bien géré.",
+      en: "The trap is underestimating the governance workload needed as the number of accounts grows: without a standardized, automated landing zone from the start, every manually created new account gradually drifts from the organization's security standards, an ungoverned proliferation of accounts is often worse than a single well-managed one.",
+    },
+    tags: ["aws-organizations", "landing-zone", "multi-account"],
+  },
+  {
+    id: "aws-well-architected-framework",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Quels sont les piliers du Well-Architected Framework d'AWS, et comment sert-il concrètement lors d'une revue d'architecture ?",
+      en: "What are the pillars of AWS's Well-Architected Framework, and how is it concretely used during an architecture review ?",
+    },
+    answer: {
+      fr: "Le framework structure l'évaluation d'une architecture cloud autour de plusieurs piliers : excellence opérationnelle, sécurité, fiabilité, efficacité des performances, optimisation des coûts, et durabilité. Une revue Well-Architected consiste à passer en revue une charge de travail concrète face à un ensemble de questions structurées pour chaque pilier, comme comment la charge se comporte-t-elle en cas de panne d'une zone de disponibilité, afin d'identifier des lacunes concrètes plutôt que de rester à un niveau de principes abstraits. C'est un outil de diagnostic qui produit une liste priorisée de risques et d'actions correctives, pas une simple checklist de conformité théorique.",
+      en: "The framework structures the evaluation of a cloud architecture around several pillars: operational excellence, security, reliability, performance efficiency, cost optimization, and sustainability. A Well-Architected review consists of reviewing a concrete workload against a set of structured questions for each pillar, like how the workload behaves during an availability zone outage, in order to identify concrete gaps rather than staying at an abstract level of principles. It's a diagnostic tool that produces a prioritized list of risks and corrective actions, not just a theoretical compliance checklist.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de réciter les six piliers sans pouvoir expliquer comment ils s'appliquent concrètement à une charge de travail réelle : la vraie valeur du framework vient de la mise en tension de ces piliers entre eux, par exemple un compromis conscient entre coût et fiabilité, plutôt que de les traiter comme des cases à cocher indépendantes.",
+      en: "The interview trap is reciting the six pillars without being able to explain how they concretely apply to a real workload: the framework's real value comes from weighing these pillars against each other, for example a conscious trade-off between cost and reliability, rather than treating them as independent boxes to check.",
+    },
+    tags: ["well-architected-framework", "architecture-review", "aws-best-practices"],
+  },
+  {
+    id: "aws-eventbridge-event-driven-architecture",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Comment Amazon EventBridge facilite-t-il une architecture orientée événements découplée entre plusieurs services ?",
+      en: "How does Amazon EventBridge facilitate a decoupled event-driven architecture across several services ?",
+    },
+    answer: {
+      fr: "EventBridge est un bus d'événements managé qui reçoit des événements de sources variées, services AWS, applications personnalisées, ou partenaires SaaS externes, et les route vers un ou plusieurs consommateurs selon des règles de filtrage basées sur le contenu de l'événement, sans que le producteur ait besoin de connaître à l'avance qui consomme ses événements. Ce découplage permet d'ajouter un nouveau consommateur à un flux d'événements existant sans jamais modifier le service producteur, contrairement à une intégration point à point où chaque nouveau consommateur demanderait une modification du côté producteur. Les schémas d'événements peuvent aussi être versionnés et découverts automatiquement, ce qui facilite la documentation et l'évolution du contrat d'événements dans le temps.",
+      en: "EventBridge is a managed event bus that receives events from varied sources, AWS services, custom applications, or external SaaS partners, and routes them to one or more consumers based on content-filtering rules, with the producer never needing to know in advance who consumes its events. This decoupling lets you add a new consumer to an existing event flow without ever modifying the producing service, unlike a point-to-point integration where every new consumer would require a change on the producer side. Event schemas can also be versioned and automatically discovered, which eases documentation and the evolution of the event contract over time.",
+    },
+    pitfall: {
+      fr: "Le piège est de traiter EventBridge comme une file de messages classique garantissant l'ordre strict de traitement : EventBridge est conçu pour du routage d'événements avec un débit élevé, pas pour un ordonnancement garanti comme celui d'une partition Kafka, un besoin d'ordre strict entre événements liés nécessite un mécanisme complémentaire, comme encoder une séquence explicite dans l'événement lui-même.",
+      en: "The trap is treating EventBridge as a classic message queue guaranteeing strict processing order: EventBridge is designed for high-throughput event routing, not for guaranteed ordering like a Kafka partition's, a need for strict order between related events requires a complementary mechanism, like encoding an explicit sequence in the event itself.",
+    },
+    tags: ["eventbridge", "event-driven-architecture", "decoupling"],
+  },
+  {
+    id: "aws-vpc-peering-transit-gateway",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Quand le VPC Peering devient-il insuffisant, et pourquoi bascule-t-on vers un Transit Gateway pour une architecture réseau à grande échelle ?",
+      en: "When does VPC Peering become insufficient, and why do you move to a Transit Gateway for a large-scale network architecture ?",
+    },
+    answer: {
+      fr: "Le VPC Peering connecte exactement deux VPC entre eux, sans transitivité : si le VPC A est connecté au VPC B, et le VPC B au VPC C, le trafic ne peut pas transiter automatiquement de A vers C à travers B, chaque paire de VPC qui doit communiquer nécessite sa propre connexion de peering dédiée. Ça devient rapidement ingérable à mesure que le nombre de VPC augmente, le nombre de connexions nécessaires croissant de façon quadratique. Un Transit Gateway agit comme un routeur central auquel chaque VPC se connecte une seule fois, et qui gère lui-même le routage entre tous les VPC connectés, ramenant la croissance du nombre de connexions à gérer à une simple relation linéaire avec le nombre de VPC plutôt que quadratique.",
+      en: "VPC Peering connects exactly two VPCs together, with no transitivity: if VPC A is connected to VPC B, and VPC B to VPC C, traffic can't automatically transit from A to C through B, every pair of VPCs that needs to communicate requires its own dedicated peering connection. This quickly becomes unmanageable as the number of VPCs grows, the number of needed connections growing quadratically. A Transit Gateway acts as a central router each VPC connects to just once, and which itself handles routing between every connected VPC, bringing the growth of connections to manage back to a simple linear relationship with the number of VPCs rather than quadratic.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de recommander systématiquement Transit Gateway même pour une architecture avec seulement deux ou trois VPC : au-delà d'un certain seuil ça se justifie clairement, mais pour un petit nombre de VPC, le coût et la complexité additionnelle d'un Transit Gateway ne se justifient pas face à une simple connexion de peering directe et suffisante.",
+      en: "The interview trap is systematically recommending Transit Gateway even for an architecture with only two or three VPCs: beyond a certain threshold it's clearly justified, but for a small number of VPCs, the added cost and complexity of a Transit Gateway isn't justified against a simple, sufficient direct peering connection.",
+    },
+    tags: ["vpc-peering", "transit-gateway", "networking"],
+  },
+  {
+    id: "aws-cost-explorer-finops",
+    topicId: "aws",
+    difficulty: "hard",
+    question: {
+      fr: "Quelle est la différence entre les Savings Plans et les Reserved Instances, et comment les tags de coût aident-ils à responsabiliser les équipes ?",
+      en: "What is the difference between Savings Plans and Reserved Instances, and how do cost allocation tags help make teams accountable ?",
+    },
+    answer: {
+      fr: "Les Reserved Instances engagent sur un type d'instance précis dans une région donnée pour un ou trois ans, en échange d'une remise substantielle, mais avec peu de flexibilité si les besoins changent de type d'instance. Les Savings Plans engagent plutôt sur un montant d'usage horaire en dollars, indépendamment du type d'instance ou même du service utilisé selon le plan choisi, ce qui offre une flexibilité bien supérieure tout en gardant un niveau de remise comparable. Les tags de coût, appliqués systématiquement à chaque ressource avec l'équipe ou le projet responsable, permettent ensuite de ventiler la facture globale par équipe dans Cost Explorer, ce qui rend chaque équipe visible et responsable de son propre coût plutôt que de diluer la responsabilité dans une facture globale opaque.",
+      en: "Reserved Instances commit to a specific instance type in a given region for one or three years, in exchange for a substantial discount, but with little flexibility if needs shift to a different instance type. Savings Plans instead commit to an hourly usage amount in dollars, independent of instance type or even the service used depending on the plan chosen, offering far greater flexibility while keeping a comparable discount level. Cost allocation tags, systematically applied to every resource with the responsible team or project, then let you break down the overall bill by team in Cost Explorer, making each team visible and accountable for its own cost rather than diluting accountability in an opaque global bill.",
+    },
+    pitfall: {
+      fr: "Le piège est d'imposer les tags de coût après coup sur une infrastructure déjà existante plutôt que dès la création des ressources : une politique de tagging obligatoire appliquée via Infrastructure as Code ou une garde AWS Config dès le départ évite la situation bien plus pénible de devoir rétro-tagger manuellement des centaines de ressources existantes.",
+      en: "The trap is imposing cost tags after the fact on already existing infrastructure rather than from resource creation: a mandatory tagging policy enforced via Infrastructure as Code or an AWS Config guardrail from the start avoids the far more painful situation of having to manually retro-tag hundreds of existing resources.",
+    },
+    tags: ["finops", "cost-optimization", "savings-plans"],
+  },
+
+  // Azure (senior/architecte)
+  {
+    id: "azure-management-groups-policy",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Comment les groupes de gestion et Azure Policy s'articulent-ils pour gouverner un grand nombre d'abonnements Azure ?",
+      en: "How do management groups and Azure Policy work together to govern a large number of Azure subscriptions ?",
+    },
+    answer: {
+      fr: "Les groupes de gestion forment une hiérarchie au-dessus des abonnements, ce qui permet d'organiser des dizaines d'abonnements par division, par environnement ou par filiale, plutôt que de gérer chaque abonnement isolément. Azure Policy s'applique à n'importe quel niveau de cette hiérarchie, avec un héritage automatique vers le bas, une politique appliquée au niveau racine s'applique donc à tous les abonnements en dessous sans configuration répétée. C'est ce qui permet d'imposer des règles transverses, comme interdire la création de ressources publiques sans chiffrement, ou restreindre les régions autorisées, de façon garantie sur l'ensemble du tenant plutôt que de compter sur la discipline de chaque équipe.",
+      en: "Management groups form a hierarchy above subscriptions, allowing dozens of subscriptions to be organized by division, environment or subsidiary, rather than managing each subscription in isolation. Azure Policy applies at any level of that hierarchy, with automatic inheritance downward, so a policy applied at the root level applies to every subscription beneath it without repeated configuration. This is what allows enforcing cross-cutting rules, like forbidding the creation of unencrypted public resources, or restricting allowed regions, with a guarantee across the whole tenant rather than relying on each team's discipline.",
+    },
+    pitfall: {
+      fr: "Le piège est de définir des politiques en mode audit uniquement, qui se contentent de signaler une non-conformité sans jamais la bloquer : pour des exigences réellement critiques, comme le chiffrement obligatoire, il faut passer en mode deny qui empêche la création de la ressource non conforme, l'audit seul laisse le risque se propager avant qu'un humain ne le remarque.",
+      en: "The trap is defining policies in audit-only mode, which merely flags non-compliance without ever blocking it: for truly critical requirements, like mandatory encryption, you need deny mode which prevents the non-compliant resource from being created, audit alone lets the risk spread before a human notices it.",
+    },
+    tags: ["management-groups", "azure-policy", "governance"],
+  },
+  {
+    id: "azure-entra-id-conditional-access",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Quel est le rôle de l'accès conditionnel dans Microsoft Entra ID, et en quoi diffère-t-il d'une authentification multifacteur appliquée uniformément ?",
+      en: "What is the role of Conditional Access in Microsoft Entra ID, and how does it differ from uniformly applied multi-factor authentication ?",
+    },
+    answer: {
+      fr: "Appliquer l'authentification multifacteur à absolument toutes les connexions, sans distinction, crée une friction constante qui pousse souvent les utilisateurs à chercher des contournements. L'accès conditionnel évalue plutôt un ensemble de signaux contextuels à chaque tentative de connexion, comme la localisation géographique, l'appareil utilisé et son niveau de conformité, le niveau de risque calculé du compte, et applique des exigences graduées seulement quand le contexte le justifie, en exigeant par exemple une vérification supplémentaire uniquement pour une connexion depuis un pays inhabituel ou un appareil non enregistré. Cette approche basée sur le risque maintient une sécurité forte sans imposer une friction inutile sur les connexions habituelles et déjà de confiance.",
+      en: "Applying multi-factor authentication to absolutely every login indiscriminately creates constant friction that often pushes users to seek workarounds. Conditional Access instead evaluates a set of contextual signals on every sign-in attempt, like geographic location, the device used and its compliance level, the account's calculated risk level, and applies graduated requirements only when context justifies it, for example requiring extra verification only for a login from an unusual country or an unregistered device. This risk-based approach maintains strong security without imposing needless friction on routine, already-trusted logins.",
+    },
+    pitfall: {
+      fr: "Le piège est de configurer des politiques d'accès conditionnel sans jamais tester leur effet en mode simulation avant activation : une politique mal réglée peut bloquer par erreur des connexions légitimes à grande échelle, en particulier pour des comptes de service automatisés qui ne peuvent pas répondre à un défi multifacteur, une politique d'exclusion explicite et testée pour ces comptes est indispensable avant tout déploiement large.",
+      en: "The trap is configuring Conditional Access policies without ever testing their effect in simulation mode before activation: a poorly tuned policy can wrongly block legitimate logins at scale, especially for automated service accounts that cannot respond to an MFA challenge, an explicit, tested exclusion policy for those accounts is essential before any broad rollout.",
+    },
+    tags: ["entra-id", "conditional-access", "identity-security"],
+  },
+  {
+    id: "azure-vnet-hub-spoke-topology",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi la topologie hub-and-spoke est-elle un choix courant pour l'architecture réseau d'une organisation utilisant plusieurs réseaux virtuels Azure ?",
+      en: "Why is the hub-and-spoke topology a common choice for the network architecture of an organization using several Azure virtual networks ?",
+    },
+    answer: {
+      fr: "Dans cette topologie, un réseau virtuel central, le hub, héberge les services partagés comme le pare-feu, la passerelle VPN vers le réseau on-premise, et les outils d'inspection du trafic, tandis que chaque application ou équipe possède son propre réseau virtuel spoke qui se connecte uniquement au hub via un peering. Le trafic entre deux spokes distincts, ou vers l'extérieur, transite obligatoirement par le hub, ce qui centralise l'inspection de sécurité et le contrôle du trafic sortant en un seul point plutôt que de le dupliquer dans chaque spoke. Ça facilite aussi l'ajout d'une nouvelle équipe ou d'une nouvelle application : elle reçoit son propre spoke isolé sans avoir à répliquer toute l'infrastructure de sécurité partagée.",
+      en: "In this topology, a central virtual network, the hub, hosts shared services like the firewall, the VPN gateway to the on-premise network, and traffic inspection tools, while each application or team owns its own spoke virtual network that connects only to the hub via peering. Traffic between two distinct spokes, or heading outward, is required to transit through the hub, which centralizes security inspection and outbound traffic control at a single point rather than duplicating it in every spoke. This also eases adding a new team or application: it gets its own isolated spoke without having to replicate the entire shared security infrastructure.",
+    },
+    pitfall: {
+      fr: "Le piège est d'oublier que le peering entre réseaux virtuels n'est pas transitif par défaut, exactement comme pour le VPC peering AWS : deux spokes ne peuvent pas communiquer directement entre eux uniquement parce qu'ils sont tous deux peerés au hub, il faut soit router explicitement le trafic à travers le firewall du hub, soit un mécanisme de routage additionnel comme une table de routes définies par l'utilisateur.",
+      en: "The trap is forgetting that peering between virtual networks isn't transitive by default, exactly like AWS VPC peering: two spokes can't communicate directly with each other just because they're both peered to the hub, you either need to explicitly route traffic through the hub's firewall, or an additional routing mechanism like a user-defined route table.",
+    },
+    tags: ["hub-spoke", "virtual-network", "network-architecture"],
+  },
+  {
+    id: "azure-aks-vs-app-service",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Quels critères font pencher le choix d'hébergement entre Azure Kubernetes Service et Azure App Service pour une application web ?",
+      en: "What criteria tip the hosting choice between Azure Kubernetes Service and Azure App Service for a web application ?",
+    },
+    answer: {
+      fr: "App Service est une plateforme managée pensée pour héberger une application web ou une API sans avoir à gérer l'infrastructure sous-jacente, avec un déploiement simple depuis un dépôt Git ou une image de conteneur, un choix pertinent quand l'application est relativement autonome et ne nécessite pas d'orchestration complexe entre plusieurs services. AKS devient pertinent quand l'organisation opère déjà plusieurs microservices qui doivent communiquer entre eux, avec des besoins de scaling fin par service, un contrôle précis du réseau interne entre les pods, ou des exigences de portabilité vers d'autres fournisseurs cloud grâce à la nature standard de Kubernetes. Le coût réel d'AKS n'est pas seulement financier mais organisationnel : il demande une expertise Kubernetes dédiée que toutes les équipes n'ont pas.",
+      en: "App Service is a managed platform designed to host a web app or API without managing the underlying infrastructure, with simple deployment from a Git repository or a container image, a sensible choice when the application is relatively self-contained and doesn't require complex orchestration across several services. AKS becomes relevant when the organization already operates several microservices that need to communicate with each other, with fine-grained per-service scaling needs, precise control over internal networking between pods, or portability requirements toward other cloud providers thanks to Kubernetes's standard nature. The real cost of AKS isn't just financial but organizational: it demands dedicated Kubernetes expertise that not every team has.",
+    },
+    pitfall: {
+      fr: "Le piège classique en entretien est de recommander Kubernetes par réflexe parce que c'est la solution la plus reconnue techniquement, sans évaluer si la complexité opérationnelle additionnelle, gestion des nœuds, des mises à jour de version, du réseau interne, est réellement justifiée par les besoins de l'application : une simple application web sur App Service, plus simple à opérer, reste souvent le meilleur choix.",
+      en: "The classic interview trap is recommending Kubernetes by reflex because it's the most technically recognized solution, without evaluating whether the added operational complexity, node management, version upgrades, internal networking, is actually justified by the application's needs: a simple web app on App Service, simpler to operate, often remains the better choice.",
+    },
+    tags: ["aks", "app-service", "hosting-strategy"],
+  },
+  {
+    id: "azure-cost-management-reservations",
+    topicId: "azure",
+    difficulty: "hard",
+    question: {
+      fr: "Comment les instances réservées et les remises Azure Hybrid Benefit permettent-elles de réduire durablement une facture Azure ?",
+      en: "How do Reserved Instances and the Azure Hybrid Benefit discount durably reduce an Azure bill ?",
+    },
+    answer: {
+      fr: "Les instances réservées engagent sur un volume de calcul pour une durée d'un ou trois ans en échange d'une remise substantielle par rapport au tarif à la demande, un choix pertinent pour une charge stable et prévisible comme une base de données de production qui tourne en continu. L'Azure Hybrid Benefit permet, lui, de réutiliser des licences Windows Server ou SQL Server déjà possédées sous contrat Software Assurance pour réduire le coût de calcul sur Azure, ce qui évite de payer deux fois pour une licence déjà détenue par l'organisation. Combinées, ces deux remises peuvent réduire significativement le coût d'une charge de travail Windows ou SQL Server stable, à condition d'avoir une visibilité claire sur les licences déjà possédées.",
+      en: "Reserved Instances commit to a compute volume for a one- or three-year term in exchange for a substantial discount over on-demand pricing, a sensible choice for a stable and predictable workload like a production database running continuously. Azure Hybrid Benefit, meanwhile, lets you reuse Windows Server or SQL Server licenses already owned under a Software Assurance contract to reduce compute cost on Azure, avoiding paying twice for a license the organization already holds. Combined, these two discounts can significantly reduce the cost of a stable Windows or SQL Server workload, provided there's clear visibility into the licenses already owned.",
+    },
+    pitfall: {
+      fr: "Le piège est de réserver de la capacité sur un type d'instance avant d'avoir une visibilité fiable sur l'usage réel à long terme : une réservation sur trois ans pour une charge qui finit par être redimensionnée ou migrée vers un autre type d'instance quelques mois plus tard représente un engagement financier gaspillé, mieux vaut d'abord observer plusieurs mois d'usage stable avant de s'engager sur la durée la plus longue.",
+      en: "The trap is reserving capacity on an instance type before having reliable visibility into real long-term usage: a three-year reservation for a workload that ends up resized or migrated to a different instance type a few months later represents a wasted financial commitment, it's better to first observe several months of stable usage before committing to the longest term.",
+    },
+    tags: ["cost-management", "reserved-instances", "hybrid-benefit"],
+  },
+
+  // Docker (senior/architecte)
+  {
+    id: "docker-multi-stage-build-optimization",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "Comment un build Docker multi-étapes réduit-il la taille et la surface d'attaque de l'image finale ?",
+      en: "How does a multi-stage Docker build reduce the final image's size and attack surface ?",
+    },
+    answer: {
+      fr: "Un build multi-étapes utilise plusieurs instructions FROM dans un même Dockerfile, où une première étape installe les outils de compilation, les dépendances de développement, et produit un artefact compilé, tandis qu'une étape finale distincte part d'une image minimale, par exemple une image distroless ou alpine, et copie uniquement l'artefact final depuis l'étape précédente. Le compilateur, les dépendances de build, et tout l'outillage intermédiaire n'existent jamais dans l'image finale livrée en production, ce qui réduit à la fois sa taille, souvent d'un facteur de plusieurs centaines de mégaoctets à quelques dizaines, et sa surface d'attaque puisque des outils comme un compilateur ou un gestionnaire de paquets absents ne peuvent pas être détournés par un attaquant ayant obtenu un accès au conteneur.",
+      en: "A multi-stage build uses several FROM instructions in a single Dockerfile, where a first stage installs build tools, development dependencies, and produces a compiled artifact, while a separate final stage starts from a minimal image, for example a distroless or alpine image, and copies only the final artifact from the previous stage. The compiler, build dependencies, and all intermediate tooling never exist in the final image shipped to production, which reduces both its size, often by a factor of several hundred megabytes down to a few dozen, and its attack surface since tools like a compiler or package manager that are absent can't be repurposed by an attacker who gained access to the container.",
+    },
+    pitfall: {
+      fr: "Le piège est de copier par erreur un répertoire trop large depuis l'étape de build vers l'étape finale, par exemple tout le répertoire de travail plutôt que le seul binaire ou artefact nécessaire, ce qui réintroduit dans l'image finale des fichiers de configuration de build, des secrets utilisés pendant la compilation, ou des dépendances intermédiaires que le multi-étapes est justement censé éliminer.",
+      en: "The trap is mistakenly copying too broad a directory from the build stage to the final stage, for example the entire working directory rather than just the needed binary or artifact, which reintroduces build configuration files, secrets used during compilation, or intermediate dependencies into the final image, exactly what multi-stage builds are meant to eliminate.",
+    },
+    tags: ["multi-stage-build", "image-optimization", "container-security"],
+  },
+  {
+    id: "docker-rootless-and-non-root-containers",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi exécuter un conteneur avec un utilisateur non root est-il une pratique de sécurité importante, même si le conteneur reste isolé de l'hôte ?",
+      en: "Why is running a container as a non-root user an important security practice, even though the container remains isolated from the host ?",
+    },
+    answer: {
+      fr: "Par défaut, un processus dans un conteneur s'exécute en tant que root à l'intérieur de ce conteneur, ce qui semble sans conséquence puisque l'isolation du conteneur limite en théorie son impact sur l'hôte. Mais une vulnérabilité d'évasion de conteneur, qui permet à un processus de sortir de son isolation pour atteindre le système hôte, devient bien plus dangereuse si le processus qui s'échappe avait des privilèges root à l'intérieur du conteneur, cette élévation se propage souvent vers l'hôte. Exécuter le conteneur avec un utilisateur applicatif dédié, non privilégié, via l'instruction USER dans le Dockerfile, limite les dégâts possibles même en cas de faille d'évasion, en appliquant le principe de défense en profondeur plutôt que de compter uniquement sur l'isolation du conteneur.",
+      en: "By default, a process in a container runs as root inside that container, which seems inconsequential since container isolation theoretically limits its impact on the host. But a container escape vulnerability, which lets a process break out of its isolation to reach the host system, becomes far more dangerous if the escaping process had root privileges inside the container, that elevation often carries over to the host. Running the container with a dedicated, unprivileged application user, via the USER instruction in the Dockerfile, limits possible damage even in the event of an escape flaw, applying defense in depth rather than relying solely on container isolation.",
+    },
+    pitfall: {
+      fr: "Le piège est de définir un utilisateur non root dans le Dockerfile sans vérifier que l'application peut réellement fonctionner avec des permissions réduites, par exemple écrire dans des répertoires ou ouvrir des ports en dessous de 1024 qui nécessitent des privilèges root par défaut sur Linux : le résultat est un conteneur qui échoue silencieusement ou avec des erreurs de permission confuses au démarrage plutôt qu'une sécurité renforcée.",
+      en: "The trap is setting a non-root user in the Dockerfile without verifying the application can actually run with reduced permissions, for example writing to directories or opening ports below 1024 which require root privileges by default on Linux: the result is a container that fails silently or with confusing permission errors at startup rather than improved security.",
+    },
+    tags: ["container-security", "non-root", "defense-in-depth"],
+  },
+  {
+    id: "docker-layer-caching-build-performance",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "Comment l'ordre des instructions dans un Dockerfile influence-t-il l'efficacité du cache de build, et quelle organisation privilégier ?",
+      en: "How does instruction order in a Dockerfile influence build cache efficiency, and what organization should be favored ?",
+    },
+    answer: {
+      fr: "Docker met en cache chaque couche produite par une instruction, et invalide non seulement la couche modifiée mais aussi toutes les couches suivantes dès qu'une instruction ou les fichiers qu'elle copie changent. Placer les instructions les plus stables en premier, comme l'installation des dépendances système ou applicatives à partir d'un fichier de manifeste, et ne copier le code source de l'application qu'en dernier, permet de préserver le cache des étapes coûteuses en temps, comme l'installation de dépendances, même quand seul le code applicatif change entre deux builds. Inverser cet ordre, en copiant tout le code source avant d'installer les dépendances, invalide le cache d'installation à chaque modification de n'importe quel fichier du projet, même un simple commentaire.",
+      en: "Docker caches each layer produced by an instruction, and invalidates not just the modified layer but every subsequent layer as soon as an instruction or the files it copies change. Placing the most stable instructions first, like installing system or application dependencies from a manifest file, and copying the application's source code only last, preserves the cache for time-costly steps, like dependency installation, even when only application code changes between two builds. Reversing that order, copying all source code before installing dependencies, invalidates the installation cache on every modification to any file in the project, even a simple comment.",
+    },
+    pitfall: {
+      fr: "Le piège est de copier le fichier de manifeste de dépendances et le reste du code source en une seule instruction COPY, ce qui empêche Docker de distinguer un changement de dépendance d'un simple changement de code applicatif : séparer explicitement la copie du fichier de manifeste, suivie de l'installation, puis la copie du reste du code, est nécessaire pour bénéficier réellement du cache différentiel.",
+      en: "The trap is copying the dependency manifest file and the rest of the source code in a single COPY instruction, which prevents Docker from distinguishing a dependency change from a simple application code change: explicitly separating the manifest file copy, followed by installation, then copying the rest of the code, is needed to actually benefit from differential caching.",
+    },
+    tags: ["layer-caching", "build-performance", "dockerfile-optimization"],
+  },
+  {
+    id: "docker-container-resource-limits",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi définir des limites explicites de CPU et de mémoire sur un conteneur est-il essentiel dans un environnement partagé, et quel risque survient sans elles ?",
+      en: "Why is setting explicit CPU and memory limits on a container essential in a shared environment, and what risk arises without them ?",
+    },
+    answer: {
+      fr: "Sans limite explicite, un conteneur peut consommer une part illimitée des ressources de la machine hôte, ce qui devient un problème direct dès que plusieurs conteneurs partagent la même machine, comme c'est le cas dans un cluster Kubernetes ou même simplement plusieurs conteneurs Docker sur le même hôte. Un conteneur avec une fuite mémoire ou une boucle consommant du CPU en continu peut alors affamer les autres conteneurs voisins, provoquant leur ralentissement voire leur arrêt forcé par le système, un phénomène parfois appelé bruit de voisinage. Définir des limites explicites, et idéalement aussi des requêtes de ressources qui garantissent un minimum réservé, permet au planificateur de placer les charges de façon prévisible et d'isoler l'impact d'un conteneur défaillant.",
+      en: "Without an explicit limit, a container can consume an unbounded share of the host machine's resources, which becomes a direct problem as soon as several containers share the same machine, as is the case in a Kubernetes cluster or even simply several Docker containers on the same host. A container with a memory leak or a loop continuously consuming CPU can then starve neighboring containers, causing their slowdown or even forced termination by the system, a phenomenon sometimes called noisy neighbor. Setting explicit limits, and ideally also resource requests that guarantee a reserved minimum, lets the scheduler place workloads predictably and isolates the impact of a failing container.",
+    },
+    pitfall: {
+      fr: "Le piège est de fixer une limite mémoire trop basse par excès de prudence sans avoir mesuré la consommation réelle sous charge : dépasser la limite mémoire provoque une terminaison brutale du conteneur par le noyau, souvent bien plus perturbatrice qu'un ralentissement progressif, il faut mesurer l'usage réel en conditions de charge représentatives avant de fixer une limite définitive plutôt que de deviner une valeur arbitraire.",
+      en: "The trap is setting a memory limit too low out of excessive caution without having measured real consumption under load: exceeding the memory limit causes an abrupt kernel-triggered container termination, often far more disruptive than a gradual slowdown, actual usage under representative load conditions should be measured before setting a final limit rather than guessing an arbitrary value.",
+    },
+    tags: ["resource-limits", "noisy-neighbor", "container-orchestration"],
+  },
+  {
+    id: "docker-image-scanning-supply-chain",
+    topicId: "docker",
+    difficulty: "hard",
+    question: {
+      fr: "Quel rôle joue le scan de vulnérabilités des images de conteneur dans la sécurisation de la chaîne d'approvisionnement logicielle ?",
+      en: "What role does container image vulnerability scanning play in securing the software supply chain ?",
+    },
+    answer: {
+      fr: "Une image de conteneur agrège des couches provenant de sources multiples, l'image de base, les paquets systèmes installés, les dépendances applicatives, chacune pouvant introduire des vulnérabilités connues indépendamment du code applicatif écrit par l'équipe. Un scanner d'image analyse chaque couche par rapport à des bases de données de vulnérabilités connues et alerte sur les composants obsolètes ou vulnérables avant que l'image ne soit déployée. Intégré directement dans le pipeline de build, ce scan bloque la publication d'une image contenant une vulnérabilité critique, ce qui déplace la détection du problème vers l'amont, avant la production, plutôt que de découvrir la faille après coup via un audit de sécurité externe ou pire un incident.",
+      en: "A container image aggregates layers from multiple sources, the base image, installed system packages, application dependencies, each potentially introducing known vulnerabilities independently of the application code written by the team. An image scanner analyzes each layer against databases of known vulnerabilities and flags outdated or vulnerable components before the image is deployed. Integrated directly into the build pipeline, this scan blocks publishing an image containing a critical vulnerability, shifting problem detection upstream, before production, rather than discovering the flaw after the fact via an external security audit or worse an incident.",
+    },
+    pitfall: {
+      fr: "Le piège est de scanner une image une seule fois au moment du build puis de la considérer sûre indéfiniment : de nouvelles vulnérabilités sont découvertes en continu dans des composants déjà publiés, une image jugée saine il y a six mois peut contenir aujourd'hui une vulnérabilité critique récemment révélée, un rescan périodique des images déjà déployées en production est nécessaire, pas seulement un scan ponctuel au moment de la construction.",
+      en: "The trap is scanning an image once at build time and then considering it safe indefinitely: new vulnerabilities are continuously discovered in already published components, an image deemed healthy six months ago may today contain a recently disclosed critical vulnerability, periodic rescanning of images already deployed to production is necessary, not just a one-off scan at build time.",
+    },
+    tags: ["image-scanning", "supply-chain-security", "vulnerability-management"],
+  },
+
+  // Terraform (senior/architecte)
+  {
+    id: "terraform-state-locking-remote-backend",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi un backend distant avec verrouillage d'état est-il indispensable dès qu'une équipe travaille à plusieurs sur le même code Terraform ?",
+      en: "Why is a remote backend with state locking essential as soon as a team collaborates on the same Terraform codebase ?",
+    },
+    answer: {
+      fr: "Le fichier d'état Terraform décrit la correspondance entre le code de configuration et les ressources réellement créées dans le cloud. S'il reste local sur le poste de chaque développeur, deux personnes qui appliquent des changements en parallèle travaillent chacune sur une copie de l'état potentiellement désynchronisée de l'autre, ce qui peut conduire l'une à écraser les changements de l'autre ou à recréer par erreur une ressource déjà existante. Un backend distant, comme un bucket de stockage cloud avec verrouillage natif, centralise cet état en un seul endroit partagé, et le verrouillage empêche deux applications concurrentes de s'exécuter simultanément sur le même état, l'une devant attendre que l'autre libère le verrou avant de démarrer.",
+      en: "The Terraform state file describes the mapping between the configuration code and the resources actually created in the cloud. If it stays local on each developer's machine, two people applying changes in parallel each work on a copy of the state potentially out of sync with the other's, which can lead one to overwrite the other's changes or mistakenly recreate an already existing resource. A remote backend, like a cloud storage bucket with native locking, centralizes this state in one shared location, and locking prevents two concurrent applies from running simultaneously against the same state, one having to wait for the other to release the lock before starting.",
+    },
+    pitfall: {
+      fr: "Le piège est de croire qu'un backend distant seul suffit sans vérifier que le mécanisme de verrouillage est réellement actif et fonctionnel : certains backends de stockage ne fournissent pas de verrouillage natif et nécessitent une ressource complémentaire dédiée, un apply concurrent sur un backend sans verrouillage effectif reproduit exactement le problème de corruption d'état qu'on cherchait à éviter.",
+      en: "The trap is believing a remote backend alone is enough without verifying the locking mechanism is actually active and functional: some storage backends don't provide native locking and require a dedicated complementary resource, a concurrent apply on a backend without effective locking reproduces exactly the state corruption problem one was trying to avoid.",
+    },
+    tags: ["state-management", "remote-backend", "team-collaboration"],
+  },
+  {
+    id: "terraform-module-design-versioning",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Quels principes suivre pour concevoir des modules Terraform réutilisables entre plusieurs équipes ou projets ?",
+      en: "What principles should be followed to design Terraform modules reusable across several teams or projects ?",
+    },
+    answer: {
+      fr: "Un module réutilisable doit exposer une interface claire à travers ses variables d'entrée et ses sorties, en cachant les détails d'implémentation internes plutôt que de forcer l'appelant à connaître la structure exacte des ressources créées à l'intérieur. Il doit rester suffisamment générique pour couvrir plusieurs cas d'usage légitimes sans devenir une jungle de conditions imbriquées essayant de tout couvrir. Chaque module publié doit aussi être versionné explicitement, via des tags Git sémantiques par exemple, pour que les équipes consommatrices puissent épingler une version précise et choisir consciemment le moment de migrer vers une version plus récente, plutôt que de subir un changement de comportement du module sans préavis simplement parce que la branche principale a évolué.",
+      en: "A reusable module should expose a clear interface through its input variables and outputs, hiding internal implementation details rather than forcing the caller to know the exact structure of resources created inside. It should stay generic enough to cover several legitimate use cases without becoming a jungle of nested conditionals trying to cover everything. Every published module should also be explicitly versioned, via semantic Git tags for example, so consuming teams can pin a specific version and consciously choose when to migrate to a newer one, rather than suffering an unannounced behavior change in the module simply because the main branch evolved.",
+    },
+    pitfall: {
+      fr: "Le piège est de référencer un module directement depuis la branche principale de son dépôt Git sans épingler de version précise : dès que le mainteneur du module pousse un changement, potentiellement incompatible, toutes les équipes consommatrices l'héritent immédiatement au prochain plan, sans le contrôle et la période de test qu'une version épinglée explicite aurait permis.",
+      en: "The trap is referencing a module directly from its Git repository's main branch without pinning a specific version: as soon as the module maintainer pushes a change, potentially incompatible, every consuming team inherits it immediately on the next plan, without the control and testing window an explicitly pinned version would have allowed.",
+    },
+    tags: ["module-design", "versioning", "reusability"],
+  },
+  {
+    id: "terraform-drift-detection-management",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Qu'est-ce que la dérive d'infrastructure par rapport à l'état Terraform, et comment la détecter et la gérer en continu ?",
+      en: "What is infrastructure drift relative to Terraform state, and how do you detect and manage it continuously ?",
+    },
+    answer: {
+      fr: "La dérive survient quand une ressource cloud est modifiée en dehors de Terraform, par exemple via la console web du fournisseur cloud lors d'une intervention manuelle en urgence, ce qui rend l'état enregistré par Terraform incohérent avec la réalité du système. Une exécution régulière de terraform plan en mode lecture seule, souvent automatisée dans un pipeline planifié, permet de détecter cette divergence en comparant l'état enregistré à l'état réel du fournisseur cloud, sans jamais appliquer de changement automatiquement. La dérive détectée doit ensuite être traitée consciemment : soit en réappliquant la configuration Terraform pour restaurer l'état voulu, soit en important formellement le changement manuel dans la configuration si ce changement était en réalité légitime et doit être conservé.",
+      en: "Drift occurs when a cloud resource is modified outside of Terraform, for example via the cloud provider's web console during an emergency manual intervention, which makes Terraform's recorded state inconsistent with the system's reality. Regularly running terraform plan in read-only mode, often automated in a scheduled pipeline, detects this divergence by comparing the recorded state to the cloud provider's actual state, without ever applying a change automatically. Detected drift must then be handled consciously: either by reapplying the Terraform configuration to restore the intended state, or by formally importing the manual change into the configuration if that change was actually legitimate and should be kept.",
+    },
+    pitfall: {
+      fr: "Le piège est de réagir à une dérive détectée en lançant automatiquement un terraform apply sans revue humaine préalable : si la modification manuelle détectée était en réalité une correction d'urgence légitime, l'écraser automatiquement sans comprendre pourquoi elle a été faite peut réintroduire l'incident même que cette modification manuelle avait justement corrigé.",
+      en: "The trap is reacting to detected drift by automatically triggering a terraform apply without prior human review: if the detected manual modification was actually a legitimate emergency fix, automatically overwriting it without understanding why it was made can reintroduce the very incident that manual change had just fixed.",
+    },
+    tags: ["drift-detection", "state-management", "infrastructure-as-code"],
+  },
+  {
+    id: "terraform-workspace-environment-separation",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi les workspaces Terraform natifs sont-ils souvent déconseillés pour séparer des environnements de production et de test, et par quoi les remplacer ?",
+      en: "Why are native Terraform workspaces often discouraged for separating production and test environments, and what should replace them ?",
+    },
+    answer: {
+      fr: "Les workspaces natifs de Terraform partagent le même code de configuration et le même backend, en ne faisant varier que le nom de l'état, ce qui signifie qu'une même erreur de configuration, ou une variable mal renseignée, s'applique identiquement à tous les workspaces y compris la production. Ils n'offrent également aucune isolation d'accès : n'importe qui ayant accès au code peut changer de workspace et appliquer directement sur la production sans barrière supplémentaire. La pratique généralement recommandée sépare plutôt les environnements par des répertoires de configuration distincts, voire des dépôts distincts, avec des backends d'état différents et des permissions d'accès différenciées, ce qui rend une action accidentelle sur la production structurellement plus difficile plutôt que de compter sur la seule vigilance humaine.",
+      en: "Terraform's native workspaces share the same configuration code and the same backend, varying only the state's name, meaning a single configuration error, or a mistyped variable, applies identically to every workspace including production. They also offer no access isolation: anyone with access to the code can switch workspace and apply directly to production with no additional barrier. The generally recommended practice instead separates environments through distinct configuration directories, or even distinct repositories, with different state backends and differentiated access permissions, making an accidental action on production structurally harder rather than relying on human vigilance alone.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter les workspaces comme LA solution standard de gestion multi-environnement sans nuancer leurs limites : ils restent utiles pour des cas d'usage plus légers, comme tester rapidement une variation temporaire de configuration, mais une séparation stricte de production nécessite une isolation plus forte que ce que les workspaces natifs fournissent.",
+      en: "The interview trap is presenting workspaces as THE standard multi-environment management solution without nuancing their limits: they remain useful for lighter use cases, like quickly testing a temporary configuration variation, but strict production separation needs stronger isolation than native workspaces provide.",
+    },
+    tags: ["workspaces", "environment-separation", "production-safety"],
+  },
+  {
+    id: "terraform-policy-as-code-sentinel-opa",
+    topicId: "terraform",
+    difficulty: "hard",
+    question: {
+      fr: "Quel problème le policy-as-code, comme Sentinel ou Open Policy Agent, résout-il par rapport à une simple revue manuelle des plans Terraform ?",
+      en: "What problem does policy-as-code, like Sentinel or Open Policy Agent, solve compared to a simple manual review of Terraform plans ?",
+    },
+    answer: {
+      fr: "Une revue manuelle d'un plan Terraform dépend entièrement de l'attention et de l'expertise du relecteur humain à l'instant où il lit le diff, un relecteur pressé ou peu familier d'un fournisseur cloud spécifique peut facilement laisser passer une ressource exposée publiquement par erreur ou un chiffrement manquant. Le policy-as-code encode ces règles de sécurité et de conformité sous forme de politiques exécutables automatiquement contre chaque plan avant qu'il ne soit appliqué, comme interdire toute base de données sans chiffrement au repos, ce qui transforme une vérification dépendante de la vigilance humaine en un contrôle systématique et reproductible, appliqué de façon identique que ce soit le développeur le plus junior ou le plus senior qui pousse le changement.",
+      en: "A manual review of a Terraform plan depends entirely on the human reviewer's attention and expertise at the moment they read the diff, a rushed reviewer or one unfamiliar with a specific cloud provider can easily miss a resource mistakenly exposed publicly or missing encryption. Policy-as-code encodes these security and compliance rules as policies automatically executed against every plan before it's applied, like forbidding any database without encryption at rest, turning a check dependent on human vigilance into a systematic, reproducible control, applied identically whether it's the most junior or the most senior developer pushing the change.",
+    },
+    pitfall: {
+      fr: "Le piège est d'écrire des politiques tellement strictes et nombreuses qu'elles bloquent des cas légitimes fréquemment, ce qui pousse les équipes à chercher des contournements ou à demander des dérogations systématiques : une politique doit rester alignée sur un risque réel et documenté, pas sur une prudence théorique maximale qui finit par être perçue comme un obstacle bureaucratique plutôt qu'une protection utile.",
+      en: "The trap is writing policies so strict and numerous that they frequently block legitimate cases, pushing teams to seek workarounds or request systematic exemptions: a policy should stay aligned with a real, documented risk, not maximal theoretical caution that ends up perceived as a bureaucratic obstacle rather than useful protection.",
+    },
+    tags: ["policy-as-code", "sentinel", "governance"],
+  },
+
+  // Apache Spark (senior/architecte)
+  {
+    id: "spark-partitioning-shuffle-optimization",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Pourquoi le partitionnement des données est-il le levier de performance le plus important sur un job Spark, et comment limiter le coût d'un shuffle ?",
+      en: "Why is data partitioning the most important performance lever on a Spark job, and how do you limit the cost of a shuffle ?",
+    },
+    answer: {
+      fr: "Spark distribue le traitement en découpant les données en partitions traitées en parallèle sur les différents exécuteurs du cluster. Un shuffle, déclenché par des opérations comme un regroupement ou une jointure entre deux jeux de données, force une redistribution des données à travers le réseau entre les nœuds pour rassembler les enregistrements partageant une même clé, une opération coûteuse en entrées-sorties disque et en trafic réseau. Réduire ce coût passe par plusieurs leviers : partitionner les données en amont selon la clé qui sera utilisée pour la jointure ou l'agrégation afin que les données pertinentes soient déjà colocalisées, éviter les jointures entre un très grand jeu de données et un petit jeu de données en utilisant plutôt une diffusion broadcast du petit jeu vers tous les exécuteurs, et ajuster le nombre de partitions pour éviter à la fois des partitions trop petites qui multiplient la charge de coordination et des partitions trop grosses qui saturent la mémoire d'un exécuteur.",
+      en: "Spark distributes processing by splitting data into partitions processed in parallel across the cluster's executors. A shuffle, triggered by operations like a groupBy or a join between two datasets, forces a redistribution of data across the network between nodes to gather records sharing the same key, an operation costly in disk I/O and network traffic. Reducing this cost involves several levers: pre-partitioning data by the key that will be used for the join or aggregation so relevant data is already colocated, avoiding joins between a very large dataset and a small one by instead using a broadcast of the small dataset to every executor, and tuning the number of partitions to avoid both partitions too small which multiply coordination overhead and partitions too large which saturate an executor's memory.",
+    },
+    pitfall: {
+      fr: "Le piège classique est d'utiliser une jointure classique entre une grande table de faits et une petite table de dimension sans activer explicitement une jointure broadcast, alors que Spark peut échouer à la détecter automatiquement selon la taille estimée, ce qui déclenche un shuffle complet et coûteux sur la grande table alors qu'une diffusion de la petite table aurait suffi et été bien moins coûteuse.",
+      en: "The classic trap is using a regular join between a large fact table and a small dimension table without explicitly enabling a broadcast join, when Spark may fail to detect it automatically depending on estimated size, triggering a full and costly shuffle on the large table when broadcasting the small table would have sufficed and been far cheaper.",
+    },
+    tags: ["partitioning", "shuffle", "performance-tuning"],
+    code: {
+      lang: "scala",
+      snippet: "import org.apache.spark.sql.functions.broadcast\n\nval result = largeFactDf.join(\n  broadcast(smallDimensionDf),\n  Seq(\"customer_id\")\n)",
+    },
+  },
+  {
+    id: "spark-catalyst-optimizer-explain",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Quel rôle joue l'optimiseur Catalyst dans l'exécution d'une requête Spark SQL, et comment lire un plan d'exécution pour diagnostiquer un problème ?",
+      en: "What role does the Catalyst optimizer play in executing a Spark SQL query, and how do you read an execution plan to diagnose a problem ?",
+    },
+    answer: {
+      fr: "Catalyst transforme une requête écrite en Spark SQL ou via l'API DataFrame en un plan logique, applique des règles d'optimisation comme le refoulement des filtres au plus près de la source de données ou l'élimination de colonnes inutilisées, puis génère un plan physique optimisé pour l'exécution réelle sur le cluster. Appeler explain sur un DataFrame affiche ce plan à plusieurs niveaux, du plan logique non optimisé jusqu'au plan physique final, ce qui permet de vérifier concrètement si un filtre a bien été refoulé près de la lecture de données plutôt qu'appliqué après avoir chargé l'intégralité du jeu de données, ou si une jointure a été convertie en jointure broadcast comme attendu.",
+      en: "Catalyst transforms a query written in Spark SQL or via the DataFrame API into a logical plan, applies optimization rules like pushing filters as close as possible to the data source or eliminating unused columns, then generates a physical plan optimized for actual execution on the cluster. Calling explain on a DataFrame displays this plan at several levels, from the unoptimized logical plan down to the final physical plan, letting you concretely verify whether a filter was actually pushed down near the data read rather than applied after loading the entire dataset, or whether a join was converted into a broadcast join as expected.",
+    },
+    pitfall: {
+      fr: "Le piège est de supposer qu'un filtre écrit tôt dans le code sera automatiquement refoulé efficacement par Catalyst sans jamais vérifier le plan réel via explain : certaines transformations, en particulier l'usage de fonctions définies par l'utilisateur opaques pour l'optimiseur, empêchent Catalyst de voir à travers et de refouler le filtre, ce qui dégrade silencieusement la performance sans qu'aucune erreur ne soit levée.",
+      en: "The trap is assuming a filter written early in the code will automatically be efficiently pushed down by Catalyst without ever checking the actual plan via explain: certain transformations, especially the use of user-defined functions opaque to the optimizer, prevent Catalyst from seeing through them to push the filter down, silently degrading performance with no error ever raised.",
+    },
+    tags: ["catalyst-optimizer", "query-planning", "spark-sql"],
+  },
+  {
+    id: "spark-memory-management-executor-tuning",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Comment la mémoire d'un exécuteur Spark se répartit-elle entre exécution et stockage, et quelles erreurs de configuration provoquent des échecs de type out-of-memory ?",
+      en: "How is a Spark executor's memory split between execution and storage, and what configuration mistakes cause out-of-memory failures ?",
+    },
+    answer: {
+      fr: "La mémoire d'un exécuteur se divise principalement entre la mémoire d'exécution, utilisée pour les calculs de shuffle, de tri et d'agrégation, et la mémoire de stockage, utilisée pour la mise en cache de données. Ces deux régions partagent un pool unifié qui peut s'emprunter dynamiquement l'une à l'autre selon les besoins courants, mais restent bornées par une fraction configurable de la mémoire totale allouée à l'exécuteur, le reste étant réservé à la JVM elle-même et à la mémoire hors tas utilisée notamment pour certains formats de sérialisation. Une erreur out-of-memory survient typiquement quand une partition individuelle est trop volumineuse pour tenir en mémoire sur un seul exécuteur, souvent à cause d'un partitionnement déséquilibré où une clé concentre une part disproportionnée des données, un phénomène appelé asymétrie de données.",
+      en: "An executor's memory is mainly split between execution memory, used for shuffle, sort, and aggregation computations, and storage memory, used for caching data. These two regions share a unified pool that can dynamically borrow from each other based on current needs, but remain bounded by a configurable fraction of the executor's total allocated memory, the rest being reserved for the JVM itself and off-heap memory used notably for certain serialization formats. An out-of-memory error typically occurs when an individual partition is too large to fit in memory on a single executor, often due to unbalanced partitioning where one key concentrates a disproportionate share of the data, a phenomenon called data skew.",
+    },
+    pitfall: {
+      fr: "Le piège est de réagir à une erreur out-of-memory en augmentant uniquement la mémoire allouée à chaque exécuteur sans diagnostiquer la cause réelle : si le problème vient d'une asymétrie de données où une seule clé concentre l'essentiel du volume, augmenter la mémoire ne fait que repousser temporairement le problème, la vraie solution passe par un salage de la clé ou un repartitionnement explicite pour répartir la charge plus uniformément.",
+      en: "The trap is reacting to an out-of-memory error by only increasing the memory allocated to each executor without diagnosing the real cause: if the problem stems from data skew where a single key concentrates most of the volume, increasing memory only temporarily postpones the problem, the real fix involves salting the key or explicit repartitioning to spread the load more evenly.",
+    },
+    tags: ["memory-management", "data-skew", "executor-tuning"],
+  },
+  {
+    id: "spark-structured-streaming-watermarks",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "À quoi servent les watermarks dans Spark Structured Streaming, et quel compromis règlent-ils face aux données en retard ?",
+      en: "What are watermarks for in Spark Structured Streaming, and what trade-off do they settle regarding late data ?",
+    },
+    answer: {
+      fr: "Dans un traitement en fenêtres temporelles sur un flux continu, comme une agrégation par fenêtre de cinq minutes, le système doit décider à quel moment une fenêtre est considérée comme définitivement close pour produire son résultat, alors que des données peuvent arriver en retard à cause de la latence réseau ou d'une source de données elle-même en retard. Un watermark définit un seuil de tolérance explicite, par exemple accepter des données en retard jusqu'à dix minutes après leur horodatage d'origine, au-delà duquel les données en retard sont définitivement ignorées et la fenêtre correspondante est purgée de l'état interne maintenu par Spark. C'est un compromis assumé entre l'exactitude, en attendant plus longtemps on capture plus de données réellement en retard, et la consommation mémoire, l'état interne pour des fenêtres jamais fermées grandirait indéfiniment sans ce seuil.",
+      en: "In windowed processing over a continuous stream, like an aggregation over a five-minute window, the system must decide when a window is considered definitively closed to produce its result, even though data can arrive late due to network latency or a data source itself running behind. A watermark defines an explicit tolerance threshold, for example accepting late data up to ten minutes after its original timestamp, beyond which late data is definitively ignored and the corresponding window is purged from the internal state Spark maintains. It's a deliberate trade-off between accuracy, waiting longer captures more genuinely late data, and memory consumption, the internal state for windows never closed would grow indefinitely without this threshold.",
+    },
+    pitfall: {
+      fr: "Le piège est de fixer un seuil de watermark arbitrairement court pour économiser de la mémoire sans avoir mesuré la distribution réelle des retards observés en production : un seuil trop agressif fait silencieusement disparaître des données légitimes mais simplement un peu tardives, ce qui fausse les résultats d'agrégation sans qu'aucune erreur explicite ne signale le problème.",
+      en: "The trap is setting an arbitrarily short watermark threshold to save memory without having measured the actual distribution of delays observed in production: too aggressive a threshold silently drops legitimate but simply somewhat late data, skewing aggregation results with no explicit error ever flagging the problem.",
+    },
+    tags: ["structured-streaming", "watermarks", "late-data-handling"],
+  },
+  {
+    id: "spark-cluster-manager-choice",
+    topicId: "spark",
+    difficulty: "hard",
+    question: {
+      fr: "Quels critères orientent le choix entre Kubernetes et YARN comme gestionnaire de cluster pour exécuter des jobs Spark en production ?",
+      en: "What criteria guide the choice between Kubernetes and YARN as the cluster manager for running Spark jobs in production ?",
+    },
+    answer: {
+      fr: "YARN reste historiquement dominant dans les environnements qui possèdent déjà un cluster Hadoop établi, avec un écosystème mature de gestion des ressources et une intégration native avec le stockage HDFS, un choix naturel quand l'infrastructure existante repose déjà sur cette pile. Kubernetes devient pertinent quand l'organisation a déjà standardisé son infrastructure de calcul autour des conteneurs pour d'autres charges de travail, ce qui permet de faire tourner Spark sur la même plateforme opérationnelle que le reste des applications plutôt que de maintenir deux systèmes de gestion de cluster distincts avec des compétences opérationnelles différentes. Kubernetes offre aussi un scaling élastique plus naturel et une isolation par conteneur plus fine, au prix d'un écosystème Spark-sur-Kubernetes encore moins mature sur certains aspects avancés que l'intégration YARN historique.",
+      en: "YARN remains historically dominant in environments that already have an established Hadoop cluster, with a mature resource management ecosystem and native integration with HDFS storage, a natural choice when existing infrastructure already relies on that stack. Kubernetes becomes relevant when the organization has already standardized its compute infrastructure around containers for other workloads, allowing Spark to run on the same operational platform as the rest of the applications rather than maintaining two separate cluster management systems with different operational skill sets. Kubernetes also offers more natural elastic scaling and finer per-container isolation, at the cost of a Spark-on-Kubernetes ecosystem still less mature on certain advanced aspects than the historical YARN integration.",
+    },
+    pitfall: {
+      fr: "Le piège en entretien est de présenter Kubernetes comme un successeur strictement supérieur à YARN pour Spark dans tous les cas : dans une organisation déjà fortement investie dans un cluster Hadoop mature avec YARN, migrer vers Kubernetes uniquement par tendance technologique, sans bénéfice opérationnel concret, ajoute une complexité de migration significative pour un gain incertain.",
+      en: "The interview trap is presenting Kubernetes as a strictly superior successor to YARN for Spark in every case: in an organization already heavily invested in a mature Hadoop cluster with YARN, migrating to Kubernetes purely out of technology trend, without a concrete operational benefit, adds significant migration complexity for an uncertain gain.",
+    },
+    tags: ["cluster-manager", "kubernetes", "yarn"],
   },
 ];
